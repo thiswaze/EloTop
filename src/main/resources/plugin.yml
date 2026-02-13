@@ -1,0 +1,24 @@
+name: EloTop
+version: 1.0.0
+main: com.elotop.EloTopPlugin
+api-version: '1.21'
+author: EloTop
+description: AlonsoLeagues Elo Top 250 Siralama
+depend:
+  - PlaceholderAPI
+softdepend:
+  - AlonsoLeagues
+commands:
+  elotop:
+    description: Elo siralamasini acar
+    usage: /elotop
+    permission: elotop.use
+  elotopreload:
+    description: Plugini yeniden yukler
+    usage: /elotopreload
+    permission: elotop.admin
+permissions:
+  elotop.use:
+    default: true
+  elotop.admin:
+    default: op
