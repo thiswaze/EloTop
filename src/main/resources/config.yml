@@ -1,0 +1,60 @@
+elo-placeholder: "%alonsoleagues_elo%"
+auto-give-paper: true
+paper-slot: 8
+
+paper:
+  name: "&6&l* &e&lELO SIRALAMA &6&l*"
+  lore:
+    - ""
+    - "&7Sag tiklayarak elo siralamasini"
+    - "&7goruntuleyebilirsin!"
+    - ""
+    - "&a> Sag Tikla"
+
+gui:
+  title: "&8&l| &6&lElo Siralamasi &8&l- &e&lSayfa {page}/{maxpage}"
+  rows: 6
+  use-player-heads: true
+  player-item:
+    name: "&e#{rank} &6&l{player}"
+    lore:
+      - ""
+      - "&7Elo: &a&l{elo}"
+      - "&7Siralama: &e#{rank}"
+      - ""
+  next-page:
+    slot: 53
+    name: "&a&lSonraki Sayfa >>"
+  previous-page:
+    slot: 45
+    name: "&c&l<< Onceki Sayfa"
+  info:
+    enabled: true
+    slot: 49
+    lore:
+      - ""
+      - "&7Toplam &e{total} &7oyuncu"
+      - "&7Sayfa: &e{page}&7/&e{maxpage}"
+      - ""
+      - "&7Senin elon: &a{yourelo}"
+      - "&7Senin siralaman: &e#{yourrank}"
+      - ""
+  close:
+    enabled: true
+    slot: 48
+  filler:
+    enabled: true
+    material: "BLACK_STAINED_GLASS_PANE"
+
+cache-update-interval: 60
+max-players: 250
+
+top-colors:
+  1: "&6&l"
+  2: "&7&l"
+  3: "&c&l"
+
+messages:
+  prefix: "&8[&6EloTop&8] "
+  no-permission: "&cYetkin yok!"
+  no-data: "&cHenuz elo verisi bulunamadi!"
