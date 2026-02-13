@@ -38,6 +38,7 @@ public class EloTopPlugin extends JavaPlugin {
         getCommand("elotopreload").setExecutor(command);
 
         startCacheTask();
+        startAutoSaveTask();
         getLogger().info("EloTop plugin aktif!");
     }
 
@@ -53,8 +54,16 @@ public class EloTopPlugin extends JavaPlugin {
         }, 100L, interval);
     }
 
+    private void startAutoSaveTask() {
+        // Her 5 dakikada otomatik kaydet
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            getServer().getScheduler().runTask(this, () -> eloManager.saveData());
+        }, 6000L, 6000L);
+    }
+
     public void reload() {
         reloadConfig();
+        eloManager.saveData();
         eloManager.clearCache();
         getServer().getScheduler().runTask(this, () -> eloManager.updateCache());
     }
