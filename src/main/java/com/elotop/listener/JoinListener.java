@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -28,16 +29,27 @@ public class JoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            plugin.getEloManager().updatePlayer(player);
-            giveEloPaper(player);
+            if (player.isOnline()) {
+                plugin.getEloManager().updatePlayer(player);
+                giveEloPaper(player);
+            }
         }, 20L);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        // Cikis yapmadan once son elo degerini kaydet
+        plugin.getEloManager().updatePlayer(player);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            giveEloPaper(player);
+            if (player.isOnline()) {
+                giveEloPaper(player);
+            }
         }, 5L);
     }
 
