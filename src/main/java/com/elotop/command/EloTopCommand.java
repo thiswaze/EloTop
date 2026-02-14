@@ -53,14 +53,7 @@ public class EloTopCommand implements CommandExecutor, TabCompleter {
             }
 
             plugin.getEloManager().updatePlayer(player);
-
-            int page = 1;
-            if (args.length > 0) {
-                try { page = Integer.parseInt(args[0]); }
-                catch (NumberFormatException e) { page = 1; }
-            }
-
-            plugin.getEloTopGUI().openGUI(player, page);
+            plugin.getEloTopGUI().openBook(player);
             return true;
         }
         return false;
@@ -69,12 +62,6 @@ public class EloTopCommand implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
             @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        List<String> suggestions = new ArrayList<>();
-        if (command.getName().equalsIgnoreCase("elotop") && args.length == 1) {
-            suggestions.add("1");
-            suggestions.add("2");
-            suggestions.add("3");
-        }
-        return suggestions;
+        return new ArrayList<>();
     }
 }
