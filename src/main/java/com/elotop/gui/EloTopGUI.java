@@ -2,28 +2,29 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
+import io.papermc.paper.adventure.PaperAdventure;
+import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
 public class EloTopGUI {
 
     private final EloTopPlugin plugin;
-    private final Map<UUID, Integer> playerPages = new HashMap<>();
 
     public EloTopGUI(EloTopPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public void openGUI(Player player, int page) {
+    public void openBook(Player player) {
         List<EloManager.EloEntry> leaderboard = plugin.getEloManager().getLeaderboard();
 
         if (leaderboard.isEmpty()) {
@@ -33,275 +34,156 @@ public class EloTopGUI {
             return;
         }
 
-        // 6 satir = 54 slot
-        int guiSize = 54;
+        // Oyuncunun kendi verisini guncelle
+        plugin.getEloManager().updatePlayer(player);
 
-        // Oyuncu slotlari - ortada duzgun yerlesim
-        // Ust satir: dekorasyon
-        // 2-5. satirlar: oyuncular (28 slot kullanilabilir)
-        // Alt satir: navigasyon
-        int[] playerSlots = {
-            10, 11, 12, 13, 14, 15, 16,
-            19, 20, 21, 22, 23, 24, 25,
-            28, 29, 30, 31, 32, 33, 34,
-            37, 38, 39, 40, 41, 42, 43
-        };
-
-        int playersPerPage = playerSlots.length; // 28
+        int playersPerPage = 10;
         int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
 
-        if (totalPages == 0) totalPages = 1;
-        if (page < 1) page = 1;
-        if (page > totalPages) page = totalPages;
+        List<Component> pages = new ArrayList<>();
 
-        playerPages.put(player.getUniqueId(), page);
+        for (int page = 0; page < totalPages; page++) {
+            int startIndex = page * playersPerPage;
+            int endIndex = Math.min(startIndex + playersPerPage, leaderboard.size());
 
-        // Baslik
-        String title = "&8&l┃ &6&lElo Sıralaması &8(&e" + page + "&7/&e" + totalPages + "&8)";
-        Inventory gui = Bukkit.createInventory(null, guiSize, colorize(title));
+            TextComponent.Builder pageBuilder = Component.text();
 
-        // === TUM SLOTLARI SIYAH CAM PANEL ILE DOLDUR ===
-        ItemStack blackPane = createPane(Material.BLACK_STAINED_GLASS_PANE, " ");
-        for (int i = 0; i < guiSize; i++) {
-            gui.setItem(i, blackPane);
+            // Sayfa basligi
+            pageBuilder.append(Component.text("     ", NamedTextColor.BLACK));
+            pageBuilder.append(Component.text("⭐ ", TextColor.color(0xFF, 0xD7, 0x00)));
+            pageBuilder.append(Component.text("ELO SIRALAMA", TextColor.color(0xFF, 0xAA, 0x00))
+                    .decoration(TextDecoration.BOLD, true));
+            pageBuilder.append(Component.text(" ⭐", TextColor.color(0xFF, 0xD7, 0x00)));
+            pageBuilder.append(Component.newline());
+
+            // Sayfa numarasi
+            pageBuilder.append(Component.text("        ", NamedTextColor.BLACK));
+            pageBuilder.append(Component.text("Sayfa " + (page + 1) + "/" + totalPages,
+                    NamedTextColor.DARK_GRAY)
+                    .decoration(TextDecoration.ITALIC, true));
+            pageBuilder.append(Component.newline());
+
+            // Cizgi
+            pageBuilder.append(Component.text("  ─────────────", NamedTextColor.DARK_GRAY));
+            pageBuilder.append(Component.newline());
+
+            // Oyuncular
+            for (int i = startIndex; i < endIndex; i++) {
+                EloManager.EloEntry entry = leaderboard.get(i);
+                int rank = i + 1;
+
+                // Rank rengi
+                TextColor rankColor = getRankNumberColor(rank);
+
+                // Siralama numarasi
+                pageBuilder.append(Component.text(" " + rank + ". ", rankColor)
+                        .decoration(TextDecoration.BOLD, true));
+
+                // League tag
+                String leagueTag = plugin.getEloManager().getPlayerLeague(entry.getUuid());
+                if (leagueTag != null && !leagueTag.isEmpty()) {
+                    pageBuilder.append(deserializeHex(leagueTag));
+                    pageBuilder.append(Component.text(" ", NamedTextColor.WHITE));
+                }
+
+                // Oyuncu ismi
+                TextColor nameColor = getNameColor(rank);
+                Component nameComponent = Component.text(entry.getPlayerName(), nameColor)
+                        .hoverEvent(HoverEvent.showText(
+                                Component.text("Elo: ", NamedTextColor.GRAY)
+                                        .append(Component.text(entry.getElo(), NamedTextColor.GREEN)
+                                                .decoration(TextDecoration.BOLD, true))
+                                        .append(Component.newline())
+                                        .append(Component.text("Siralama: ", NamedTextColor.GRAY))
+                                        .append(Component.text("#" + rank, NamedTextColor.YELLOW))
+                        ));
+                pageBuilder.append(nameComponent);
+
+                // Elo
+                pageBuilder.append(Component.text(" ", NamedTextColor.WHITE));
+                pageBuilder.append(Component.text("[", NamedTextColor.DARK_GRAY));
+                pageBuilder.append(Component.text(String.valueOf(entry.getElo()), NamedTextColor.GREEN)
+                        .decoration(TextDecoration.BOLD, true));
+                pageBuilder.append(Component.text("]", NamedTextColor.DARK_GRAY));
+
+                pageBuilder.append(Component.newline());
+            }
+
+            // Alt bilgi - oyuncunun kendi sirasi
+            int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
+            int yourElo = plugin.getEloManager().getPlayerEloLive(player);
+
+            pageBuilder.append(Component.text("  ─────────────", NamedTextColor.DARK_GRAY));
+            pageBuilder.append(Component.newline());
+            pageBuilder.append(Component.text(" Sen: ", NamedTextColor.GRAY));
+            pageBuilder.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
+                    .decoration(TextDecoration.BOLD, true));
+            pageBuilder.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
+            pageBuilder.append(Component.text("Elo: ", NamedTextColor.GRAY));
+            pageBuilder.append(Component.text(String.valueOf(yourElo), NamedTextColor.GREEN)
+                    .decoration(TextDecoration.BOLD, true));
+
+            pages.add(pageBuilder.build());
         }
 
-        // === UST DEKORASYON ===
-        // Ust satir ortasina sari cam panel
-        ItemStack yellowPane = createPane(Material.YELLOW_STAINED_GLASS_PANE, " ");
-        ItemStack orangePane = createPane(Material.ORANGE_STAINED_GLASS_PANE, " ");
-        gui.setItem(3, yellowPane);
-        gui.setItem(4, orangePane);
-        gui.setItem(5, yellowPane);
+        // Kitabi olustur ve ac
+        Book book = Book.book(
+                Component.text("Elo Sıralama"),
+                Component.text("Server"),
+                pages
+        );
 
-        // Ust ortaya bilgi itemi
-        int yourElo = plugin.getEloManager().getPlayerEloLive(player);
-        int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
-        String yourRankStr = yourRank > 0 ? "#" + yourRank : "Sıralamada Yok";
-
-        ItemStack infoItem = createItem(Material.NETHER_STAR,
-                "&6&l⭐ ELO SIRALAMA &6&l⭐",
-                Arrays.asList(
-                        "",
-                        "&7Toplam &e" + plugin.getEloManager().getTotalPlayers() + " &7oyuncu",
-                        "&7Sayfa: &e" + page + "&7/&e" + totalPages,
-                        "",
-                        "&6Senin Elon: &f&l" + yourElo,
-                        "&6Sıralaman: &f&l" + yourRankStr,
-                        ""
-                ));
-        gui.setItem(4, infoItem);
-
-        // === OYUNCULARI YERLESTIR ===
-        int startIndex = (page - 1) * playersPerPage;
-        int endIndex = Math.min(startIndex + playersPerPage, leaderboard.size());
-
-        for (int i = startIndex; i < endIndex; i++) {
-            EloManager.EloEntry entry = leaderboard.get(i);
-            int rank = i + 1;
-            int slotIndex = i - startIndex;
-
-            if (slotIndex >= playerSlots.length) break;
-
-            ItemStack playerItem = createRankedPlayerItem(entry, rank);
-            gui.setItem(playerSlots[slotIndex], playerItem);
-        }
-
-        // === KENAR DEKORASYONU ===
-        // Sol ve sag kenarlara gri cam panel
-        ItemStack grayPane = createPane(Material.GRAY_STAINED_GLASS_PANE, " ");
-        int[] sideSlots = {0, 1, 7, 8, 9, 17, 18, 26, 27, 35, 36, 44};
-        for (int s : sideSlots) {
-            gui.setItem(s, grayPane);
-        }
-
-        // Ust satir
-        gui.setItem(2, grayPane);
-        gui.setItem(6, grayPane);
-
-        // === ALT NAVIGASYON SATIRI ===
-        // Alt satir dekorasyon
-        ItemStack redPane = createPane(Material.RED_STAINED_GLASS_PANE, " ");
-        ItemStack limePane = createPane(Material.LIME_STAINED_GLASS_PANE, " ");
-
-        for (int i = 45; i < 54; i++) {
-            gui.setItem(i, blackPane);
-        }
-
-        // Onceki sayfa (sol)
-        if (page > 1) {
-            ItemStack prevItem = createItem(Material.ARROW,
-                    "&c&l◀ Önceki Sayfa",
-                    Arrays.asList(
-                            "",
-                            "&7Sayfa &e" + (page - 1) + " &7e dön",
-                            "&eTıkla!"
-                    ));
-            gui.setItem(45, redPane);
-            gui.setItem(46, prevItem);
-            gui.setItem(47, redPane);
-        }
-
-        // Kapat butonu (orta)
-        ItemStack closeItem = createItem(Material.BARRIER,
-                "&c&lKapat",
-                Arrays.asList("", "&7Menüyü kapatmak için tıkla"));
-        gui.setItem(49, closeItem);
-
-        // Senin bilgilerin (orta sol)
-        ItemStack yourInfo = createPlayerHead(player,
-                "&e&lSenin Bilgilerin",
-                Arrays.asList(
-                        "",
-                        "&7İsim: &f" + player.getName(),
-                        "&7Elo: &a&l" + yourElo,
-                        "&7Sıralama: &e" + yourRankStr,
-                        ""
-                ));
-        gui.setItem(48, yourInfo);
-
-        // Sayfa bilgisi (orta sag)
-        ItemStack pageInfo = createItem(Material.BOOK,
-                "&e&lSayfa Bilgisi",
-                Arrays.asList(
-                        "",
-                        "&7Mevcut Sayfa: &e" + page,
-                        "&7Toplam Sayfa: &e" + totalPages,
-                        "&7Toplam Oyuncu: &e" + plugin.getEloManager().getTotalPlayers(),
-                        ""
-                ));
-        gui.setItem(50, pageInfo);
-
-        // Sonraki sayfa (sag)
-        if (page < totalPages) {
-            ItemStack nextItem = createItem(Material.ARROW,
-                    "&a&lSonraki Sayfa ▶",
-                    Arrays.asList(
-                            "",
-                            "&7Sayfa &e" + (page + 1) + " &7e geç",
-                            "&eTıkla!"
-                    ));
-            gui.setItem(51, limePane);
-            gui.setItem(52, nextItem);
-            gui.setItem(53, limePane);
-        }
-
-        player.openInventory(gui);
+        player.openBook(book);
     }
 
-    private ItemStack createRankedPlayerItem(EloManager.EloEntry entry, int rank) {
-        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-
-        if (meta != null) {
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(entry.getUuid()));
-
-            // Rank'e gore isim rengi
-            String rankColor;
-            String rankSymbol;
-            switch (rank) {
-                case 1:
-                    rankColor = "&6&l";
-                    rankSymbol = "👑 ";
-                    break;
-                case 2:
-                    rankColor = "&f&l";
-                    rankSymbol = "🥈 ";
-                    break;
-                case 3:
-                    rankColor = "&c&l";
-                    rankSymbol = "🥉 ";
-                    break;
-                default:
-                    rankColor = "&e";
-                    rankSymbol = "";
-                    break;
-            }
-
-            String displayName = rankColor + rankSymbol + "#" + rank + " " + entry.getPlayerName();
-            meta.displayName(colorize(displayName));
-
-            // Lore
-            List<Component> lore = new ArrayList<>();
-            lore.add(colorize(""));
-
-            // Rank'e gore ozel lore
-            if (rank == 1) {
-                lore.add(colorize("&8▪ &6&lBİRİNCİ &8▪"));
-            } else if (rank == 2) {
-                lore.add(colorize("&8▪ &f&lİKİNCİ &8▪"));
-            } else if (rank == 3) {
-                lore.add(colorize("&8▪ &c&lÜÇÜNCÜ &8▪"));
-            }
-
-            lore.add(colorize(""));
-            lore.add(colorize("&7Sıralama: " + rankColor + "#" + rank));
-            lore.add(colorize("&7Elo: &a&l" + entry.getElo()));
-            lore.add(colorize(""));
-
-            if (rank <= 3) {
-                lore.add(colorize("&6⭐ Top 3 Oyuncu! ⭐"));
-                lore.add(colorize(""));
-            }
-
-            meta.lore(lore);
-            item.setItemMeta(meta);
-        }
-
-        return item;
+    private TextColor getRankNumberColor(int rank) {
+        if (rank == 1) return TextColor.color(0xFF, 0xD7, 0x00); // Altin
+        if (rank == 2) return TextColor.color(0xC0, 0xC0, 0xC0); // Gumus
+        if (rank == 3) return TextColor.color(0xCD, 0x7F, 0x32); // Bronz
+        if (rank <= 10) return TextColor.color(0xFF, 0xAA, 0x00); // Turuncu
+        return NamedTextColor.DARK_GRAY;
     }
 
-    private ItemStack createPlayerHead(Player player, String name, List<String> lore) {
-        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-        if (meta != null) {
-            meta.setOwningPlayer(player);
-            meta.displayName(colorize(name));
-            if (lore != null) {
-                List<Component> cl = new ArrayList<>();
-                for (String line : lore) cl.add(colorize(line));
-                meta.lore(cl);
-            }
-            item.setItemMeta(meta);
-        }
-        return item;
+    private TextColor getNameColor(int rank) {
+        if (rank == 1) return TextColor.color(0xFF, 0xD7, 0x00);
+        if (rank == 2) return TextColor.color(0xC0, 0xC0, 0xC0);
+        if (rank == 3) return TextColor.color(0xCD, 0x7F, 0x32);
+        return NamedTextColor.BLACK;
     }
 
-    private ItemStack createPane(Material material, String name) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(colorize(name));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
+    /**
+     * Hex renk kodlarini iceren stringleri Component'e cevirir
+     * Ornek: #CB7E31&lBRONZ &7&l[&f&lV&7&l]
+     */
+    public static Component deserializeHex(String text) {
+        if (text == null || text.isEmpty()) return Component.empty();
 
-    private ItemStack createItem(Material material, String name, List<String> lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(colorize(name));
-            if (lore != null && !lore.isEmpty()) {
-                List<Component> cl = new ArrayList<>();
-                for (String line : lore) cl.add(colorize(line));
-                meta.lore(cl);
+        // # ile baslayan hex kodlarini & formatina cevir
+        // #RRGGBB -> &#RRGGBB (LegacyComponentSerializer icin)
+        StringBuilder sb = new StringBuilder();
+        char[] chars = text.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            if (chars[i] == '#' && i + 6 < chars.length) {
+                // Hex kod kontrolu
+                String hex = text.substring(i + 1, i + 7);
+                if (hex.matches("[0-9A-Fa-f]{6}")) {
+                    sb.append("&#").append(hex);
+                    i += 6;
+                    continue;
+                }
             }
-            item.setItemMeta(meta);
+            sb.append(chars[i]);
         }
-        return item;
+
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(sb.toString());
     }
 
     public static Component colorize(String text) {
         if (text == null) return Component.empty();
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
+        return deserializeHex(text);
     }
 
-    public int getPlayerPage(UUID uuid) {
-        return playerPages.getOrDefault(uuid, 1);
-    }
-
-    public void removePlayer(UUID uuid) {
-        playerPages.remove(uuid);
-    }
+    // Artik GUI kullanmiyoruz ama uyumluluk icin
+    public int getPlayerPage(UUID uuid) { return 1; }
+    public void removePlayer(UUID uuid) { }
 }
