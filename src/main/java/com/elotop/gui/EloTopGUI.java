@@ -2,11 +2,9 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
-import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -34,7 +32,6 @@ public class EloTopGUI {
             return;
         }
 
-        // Oyuncunun kendi verisini guncelle
         plugin.getEloManager().updatePlayer(player);
 
         int playersPerPage = 10;
@@ -109,7 +106,7 @@ public class EloTopGUI {
                 pageBuilder.append(Component.newline());
             }
 
-            // Alt bilgi - oyuncunun kendi sirasi
+            // Alt bilgi
             int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
             int yourElo = plugin.getEloManager().getPlayerEloLive(player);
 
@@ -126,9 +123,8 @@ public class EloTopGUI {
             pages.add(pageBuilder.build());
         }
 
-        // Kitabi olustur ve ac
         Book book = Book.book(
-                Component.text("Elo Sıralama"),
+                Component.text("Elo Siralama"),
                 Component.text("Server"),
                 pages
         );
@@ -137,10 +133,10 @@ public class EloTopGUI {
     }
 
     private TextColor getRankNumberColor(int rank) {
-        if (rank == 1) return TextColor.color(0xFF, 0xD7, 0x00); // Altin
-        if (rank == 2) return TextColor.color(0xC0, 0xC0, 0xC0); // Gumus
-        if (rank == 3) return TextColor.color(0xCD, 0x7F, 0x32); // Bronz
-        if (rank <= 10) return TextColor.color(0xFF, 0xAA, 0x00); // Turuncu
+        if (rank == 1) return TextColor.color(0xFF, 0xD7, 0x00);
+        if (rank == 2) return TextColor.color(0xC0, 0xC0, 0xC0);
+        if (rank == 3) return TextColor.color(0xCD, 0x7F, 0x32);
+        if (rank <= 10) return TextColor.color(0xFF, 0xAA, 0x00);
         return NamedTextColor.DARK_GRAY;
     }
 
@@ -151,20 +147,13 @@ public class EloTopGUI {
         return NamedTextColor.BLACK;
     }
 
-    /**
-     * Hex renk kodlarini iceren stringleri Component'e cevirir
-     * Ornek: #CB7E31&lBRONZ &7&l[&f&lV&7&l]
-     */
     public static Component deserializeHex(String text) {
         if (text == null || text.isEmpty()) return Component.empty();
 
-        // # ile baslayan hex kodlarini & formatina cevir
-        // #RRGGBB -> &#RRGGBB (LegacyComponentSerializer icin)
         StringBuilder sb = new StringBuilder();
         char[] chars = text.toCharArray();
         for (int i = 0; i < chars.length; i++) {
             if (chars[i] == '#' && i + 6 < chars.length) {
-                // Hex kod kontrolu
                 String hex = text.substring(i + 1, i + 7);
                 if (hex.matches("[0-9A-Fa-f]{6}")) {
                     sb.append("&#").append(hex);
@@ -183,7 +172,6 @@ public class EloTopGUI {
         return deserializeHex(text);
     }
 
-    // Artik GUI kullanmiyoruz ama uyumluluk icin
     public int getPlayerPage(UUID uuid) { return 1; }
     public void removePlayer(UUID uuid) { }
 }
