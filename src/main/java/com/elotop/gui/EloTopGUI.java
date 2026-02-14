@@ -37,6 +37,10 @@ public class EloTopGUI {
         int playersPerPage = 10;
         int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
 
+        // Oyuncunun kendi bilgisi
+        int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
+        int yourElo = plugin.getEloManager().getPlayerEloLive(player);
+
         List<Component> pages = new ArrayList<>();
 
         for (int page = 0; page < totalPages; page++) {
@@ -47,22 +51,10 @@ public class EloTopGUI {
 
             // ===== BASLIK =====
             pb.append(Component.text("  ✦ ", TextColor.color(0xFF, 0xAA, 0x00)));
-            pb.append(Component.text("Elo Sıralaması", TextColor.color(0x00, 0x00, 0x00))
+            pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
                     .decoration(TextDecoration.BOLD, true));
             pb.append(Component.text(" ✦", TextColor.color(0xFF, 0xAA, 0x00)));
             pb.append(Component.newline());
-
-            // Sayfa
-            pb.append(Component.text("      Sayfa ", NamedTextColor.DARK_GRAY));
-            pb.append(Component.text((page + 1), NamedTextColor.DARK_GRAY)
-                    .decoration(TextDecoration.BOLD, true));
-            pb.append(Component.text("/", NamedTextColor.DARK_GRAY));
-            pb.append(Component.text(totalPages, NamedTextColor.DARK_GRAY)
-                    .decoration(TextDecoration.BOLD, true));
-            pb.append(Component.newline());
-
-            // Ust cizgi
-            pb.append(Component.text(" ━━━━━━━━━━━━━", NamedTextColor.DARK_GRAY));
             pb.append(Component.newline());
 
             // ===== OYUNCULAR =====
@@ -70,99 +62,55 @@ public class EloTopGUI {
                 EloManager.EloEntry entry = leaderboard.get(i);
                 int rank = i + 1;
 
-                // Rank numarasi
-                String rankNum;
-                if (rank < 10) {
-                    rankNum = " " + rank;
-                } else if (rank < 100) {
-                    rankNum = "" + rank;
-                } else {
-                    rankNum = "" + rank;
-                }
-
-                // Top 3 ozel gosterim
+                // Top 3 ozel emoji, digerleri normal numara
                 if (rank == 1) {
-                    pb.append(Component.text(" ", NamedTextColor.BLACK));
-                    pb.append(Component.text("❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
+                    pb.append(Component.text(" ❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
                 } else if (rank == 2) {
-                    pb.append(Component.text(" ", NamedTextColor.BLACK));
-                    pb.append(Component.text("❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
+                    pb.append(Component.text(" ❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
                 } else if (rank == 3) {
-                    pb.append(Component.text(" ", NamedTextColor.BLACK));
-                    pb.append(Component.text("❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
+                    pb.append(Component.text(" ❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
                 } else {
-                    pb.append(Component.text(" ", NamedTextColor.BLACK));
-                    pb.append(Component.text("#" + rank + " ", NamedTextColor.DARK_GRAY));
+                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
                 }
 
-                // League tag
+                // Hover detay
                 String leagueTag = entry.getLeagueTag();
-                if (leagueTag != null && !leagueTag.isEmpty()) {
-                    pb.append(deserializeHex(leagueTag));
-                    pb.append(Component.text(" ", NamedTextColor.WHITE));
-                }
-
-                // Oyuncu ismi - hover ile detay
-                TextColor nameColor;
-                if (rank == 1) nameColor = TextColor.color(0xFF, 0xD7, 0x00);
-                else if (rank == 2) nameColor = TextColor.color(0xAA, 0xAA, 0xAA);
-                else if (rank == 3) nameColor = TextColor.color(0xCD, 0x7F, 0x32);
-                else nameColor = NamedTextColor.BLACK;
-
                 Component hover = Component.text("")
-                        .append(Component.text("┃ ", TextColor.color(0xFF, 0xAA, 0x00))
-                                .decoration(TextDecoration.BOLD, true))
                         .append(Component.text(entry.getPlayerName(), NamedTextColor.WHITE)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
-                        .append(Component.text("┃ ", TextColor.color(0xFF, 0xAA, 0x00))
-                                .decoration(TextDecoration.BOLD, true))
-                        .append(Component.newline())
-                        .append(Component.text("┃ ", TextColor.color(0xFF, 0xAA, 0x00))
-                                .decoration(TextDecoration.BOLD, true))
                         .append(Component.text("Sıra: ", NamedTextColor.GRAY))
                         .append(Component.text("#" + rank, NamedTextColor.YELLOW)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
-                        .append(Component.text("┃ ", TextColor.color(0xFF, 0xAA, 0x00))
-                                .decoration(TextDecoration.BOLD, true))
                         .append(Component.text("Elo: ", NamedTextColor.GRAY))
                         .append(Component.text(entry.getElo(), NamedTextColor.GREEN)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
-                        .append(Component.text("┃ ", TextColor.color(0xFF, 0xAA, 0x00))
-                                .decoration(TextDecoration.BOLD, true))
                         .append(Component.text("Lig: ", NamedTextColor.GRAY))
                         .append(leagueTag != null && !leagueTag.isEmpty()
                                 ? deserializeHex(leagueTag) : Component.text("?", NamedTextColor.GRAY));
 
-                pb.append(Component.text(entry.getPlayerName(), nameColor)
+                // Oyuncu ismi - siyah
+                pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
                         .hoverEvent(HoverEvent.showText(hover)));
 
-                pb.append(Component.newline());
+                // Elo degeri
+                pb.append(Component.text(" " + entry.getElo(), TextColor.color(0x55, 0xAA, 0x55)));
 
-                // Elo satiri (ismin altinda)
-                pb.append(Component.text("       ", NamedTextColor.BLACK));
-                pb.append(Component.text("⬥ ", TextColor.color(0x55, 0xFF, 0x55)));
-                pb.append(Component.text(entry.getElo() + " ELO", TextColor.color(0x55, 0xFF, 0x55)));
                 pb.append(Component.newline());
             }
 
-            // ===== ALT BILGI =====
-            pb.append(Component.text(" ━━━━━━━━━━━━━", NamedTextColor.DARK_GRAY));
-            pb.append(Component.newline());
-
-            // Oyuncunun kendi bilgisi
-            int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
-            int yourElo = plugin.getEloManager().getPlayerEloLive(player);
-            String yourLeague = plugin.getEloManager().getPlayerLeague(player.getUniqueId());
-
-            pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
-            pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
-            pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
-                    .decoration(TextDecoration.BOLD, true));
-            pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
-            pb.append(Component.text(yourElo + " ELO", TextColor.color(0x55, 0xFF, 0x55)));
+            // ===== SON SAYFADA SEN BILGISI =====
+            if (page == totalPages - 1) {
+                pb.append(Component.newline());
+                pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
+                pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
+                pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
+                        .decoration(TextDecoration.BOLD, true));
+                pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
+                pb.append(Component.text(yourElo + " ELO", TextColor.color(0x55, 0xAA, 0x55)));
+            }
 
             pages.add(pb.build());
         }
