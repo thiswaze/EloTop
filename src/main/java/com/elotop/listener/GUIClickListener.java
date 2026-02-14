@@ -36,20 +36,20 @@ public class GUIClickListener implements Listener {
         int currentPage = plugin.getEloTopGUI().getPlayerPage(player.getUniqueId());
         int slot = event.getRawSlot();
 
-        int nextSlot = plugin.getConfig().getInt("gui.next-page.slot", 53);
-        if (slot == nextSlot && clicked.getType() == Material.ARROW) {
+        // Sonraki sayfa - slot 52 (sag ok)
+        if (slot == 52 && clicked.getType() == Material.ARROW) {
             plugin.getEloTopGUI().openGUI(player, currentPage + 1);
             return;
         }
 
-        int prevSlot = plugin.getConfig().getInt("gui.previous-page.slot", 45);
-        if (slot == prevSlot && clicked.getType() == Material.ARROW) {
+        // Onceki sayfa - slot 46 (sol ok)
+        if (slot == 46 && clicked.getType() == Material.ARROW) {
             plugin.getEloTopGUI().openGUI(player, currentPage - 1);
             return;
         }
 
-        int closeSlot = plugin.getConfig().getInt("gui.close.slot", 48);
-        if (slot == closeSlot && clicked.getType() == Material.BARRIER) {
+        // Kapat - slot 49
+        if (slot == 49 && clicked.getType() == Material.BARRIER) {
             player.closeInventory();
         }
     }
