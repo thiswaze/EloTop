@@ -23,3 +23,33 @@ messages:
   prefix: "&8[&6EloTop&8] "
   no-permission: "&cYetkin yok!"
   no-data: "&cHenuz elo verisi bulunamadi!"
+  
+# Rank emojileri ve elo araliklari
+rank-emojis:
+  enabled: true
+  ranks:
+    bronze:
+      min-elo: 0
+      max-elo: 999
+      emoji: "◈"
+      color: "#CD7F32"  # Kahverengi
+    silver:
+      min-elo: 1000
+      max-elo: 1999
+      emoji: "◆"
+      color: "#C0C0C0"  # Gümüş
+    gold:
+      min-elo: 2000
+      max-elo: 2999
+      emoji: "★"
+      color: "#FFD700"  # Altın
+    platinum:
+      min-elo: 3000
+      max-elo: 3999
+      emoji: "✦"
+      color: "#00FFFF"  # Açık mavi
+    diamond:
+      min-elo: 4000
+      max-elo: 999999
+      emoji: "❖"
+      color: "#B9F2FF"  # Elmas mavisi
