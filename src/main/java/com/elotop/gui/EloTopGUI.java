@@ -2,31 +2,27 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
+import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
 public class EloTopGUI {
 
     private final EloTopPlugin plugin;
-    private final Map<UUID, Integer> playerPages = new HashMap<>();
 
     public EloTopGUI(EloTopPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public void openGUI(Player player, int page) {
+    public void openBook(Player player) {
         List<EloManager.EloEntry> leaderboard = plugin.getEloManager().getLeaderboard();
 
         if (leaderboard.isEmpty()) {
@@ -38,265 +34,88 @@ public class EloTopGUI {
 
         plugin.getEloManager().updatePlayer(player);
 
-        int guiSize = 54; // 6 satır
-        int playersPerPage = 21; // 3 satır x 7 oyuncu
-
+        int playersPerPage = 10;
         int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
-        if (totalPages == 0) totalPages = 1;
-        if (page < 1) page = 1;
-        if (page > totalPages) page = totalPages;
 
-        playerPages.put(player.getUniqueId(), page);
-
-        // GUI başlığı - ItemsAdder emoji kullan
-        String title = "§8§l┃ §6§l:gold_rank: §e§lELO TOP §6§l:gold_rank: §8§l┃ §7" + page + "/" + totalPages;
-        Inventory gui = Bukkit.createInventory(null, guiSize, colorize(title));
-
-        // Üst süsleme (sarı-turuncu gradient)
-        ItemStack topDecor = createGlassPane(Material.ORANGE_STAINED_GLASS_PANE, "§6✦");
-        ItemStack topDecor2 = createGlassPane(Material.YELLOW_STAINED_GLASS_PANE, "§e✦");
-        for (int i = 0; i < 9; i++) {
-            gui.setItem(i, i % 2 == 0 ? topDecor : topDecor2);
-        }
-
-        // Alt süsleme
-        for (int i = 45; i < 54; i++) {
-            gui.setItem(i, i % 2 == 0 ? topDecor : topDecor2);
-        }
-
-        // Yan süslemeler
-        ItemStack sideDecor = createGlassPane(Material.GRAY_STAINED_GLASS_PANE, " ");
-        int[] sideSlots = {9, 17, 18, 26, 27, 35, 36, 44};
-        for (int slot : sideSlots) {
-            gui.setItem(slot, sideDecor);
-        }
-
-        // Oyuncu slotları (3 satır x 7 oyuncu)
-        int[] playerSlots = {
-            10, 11, 12, 13, 14, 15, 16,  // 1. satır
-            19, 20, 21, 22, 23, 24, 25,  // 2. satır
-            28, 29, 30, 31, 32, 33, 34   // 3. satır
-        };
-
-        int startIndex = (page - 1) * playersPerPage;
-        int endIndex = Math.min(startIndex + playersPerPage, leaderboard.size());
-
-        for (int i = startIndex; i < endIndex; i++) {
-            EloManager.EloEntry entry = leaderboard.get(i);
-            int rank = i + 1;
-            int slotIndex = i - startIndex;
-
-            if (slotIndex >= playerSlots.length) break;
-
-            ItemStack skull = createPlayerHead(entry, rank);
-            gui.setItem(playerSlots[slotIndex], skull);
-        }
-
-        // Boş slotları doldur
-        ItemStack emptySlot = createGlassPane(Material.BLACK_STAINED_GLASS_PANE, " ");
-        for (int slot : playerSlots) {
-            if (gui.getItem(slot) == null) {
-                gui.setItem(slot, emptySlot);
-            }
-        }
-
-        // Alt navigasyon satırı
         int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
         int yourElo = plugin.getEloManager().getPlayerEloLive(player);
 
-        // Önceki sayfa butonu
-        if (page > 1) {
-            ItemStack prevButton = createNavButton(Material.ARROW, 
-                "§c§l◀ ÖNCEKİ SAYFA",
-                Arrays.asList(
-                    "",
-                    "§7Sayfa: §e" + (page - 1) + "§7/§e" + totalPages,
-                    "",
-                    "§aTıkla!"
-                ));
-            gui.setItem(45, prevButton);
-        }
+        List<Component> pages = new ArrayList<>();
 
-        // Sonraki sayfa butonu
-        if (page < totalPages) {
-            ItemStack nextButton = createNavButton(Material.ARROW,
-                "§a§lSONRAKİ SAYFA ▶",
-                Arrays.asList(
-                    "",
-                    "§7Sayfa: §e" + (page + 1) + "§7/§e" + totalPages,
-                    "",
-                    "§aTıkla!"
-                ));
-            gui.setItem(53, nextButton);
-        }
+        for (int page = 0; page < totalPages; page++) {
+            int startIndex = page * playersPerPage;
+            int endIndex = Math.min(startIndex + playersPerPage, leaderboard.size());
 
-        // Ortada oyuncunun kendi bilgisi
-        ItemStack selfInfo = createSelfInfoHead(player, yourRank, yourElo, leaderboard.size());
-        gui.setItem(49, selfInfo);
+            TextComponent.Builder pb = Component.text();
 
-        // Kapat butonu
-        ItemStack closeButton = createNavButton(Material.BARRIER,
-            "§c§l✖ KAPAT",
-            Arrays.asList(
-                "",
-                "§7Menüyü kapatmak için tıkla"
-            ));
-        gui.setItem(47, closeButton);
+            // ===== BAŞLIK =====
+            pb.append(Component.text("  ✦ ", TextColor.color(0xFF, 0xAA, 0x00)));
+            pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
+                    .decoration(TextDecoration.BOLD, true));
+            pb.append(Component.text(" ✦", TextColor.color(0xFF, 0xAA, 0x00)));
+            pb.append(Component.newline());
+            pb.append(Component.newline());
 
-        // Bilgi butonu
-        ItemStack infoButton = createNavButton(Material.BOOK,
-            "§6§l📊 BİLGİ",
-            Arrays.asList(
-                "",
-                "§7Toplam Oyuncu: §e" + leaderboard.size(),
-                "§7Sayfa: §e" + page + "§7/§e" + totalPages,
-                "",
-                "§7Senin Sıran: §e#" + (yourRank > 0 ? yourRank : "?"),
-                "§7Senin Elon: §a" + yourElo
-            ));
-        gui.setItem(51, infoButton);
+            // ===== OYUNCULAR =====
+            for (int i = startIndex; i < endIndex; i++) {
+                EloManager.EloEntry entry = leaderboard.get(i);
+                int rank = i + 1;
+                int elo = entry.getElo();
 
-        player.openInventory(gui);
-    }
+                // Top 3 özel emoji
+                if (rank == 1) {
+                    pb.append(Component.text(" ❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
+                } else if (rank == 2) {
+                    pb.append(Component.text(" ❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
+                } else if (rank == 3) {
+                    pb.append(Component.text(" ❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
+                } else {
+                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
+                }
 
-    private ItemStack createPlayerHead(EloManager.EloEntry entry, int rank) {
-        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) skull.getItemMeta();
+                // Hover detayları
+                Component hover = Component.text("")
+                        .append(Component.text(entry.getPlayerName(), NamedTextColor.WHITE)
+                                .decoration(TextDecoration.BOLD, true))
+                        .append(Component.newline())
+                        .append(Component.text("Sıra: ", NamedTextColor.GRAY))
+                        .append(Component.text("#" + rank, NamedTextColor.YELLOW))
+                        .append(Component.newline())
+                        .append(Component.text("Elo: ", NamedTextColor.GRAY))
+                        .append(Component.text(elo, NamedTextColor.GREEN));
 
-        if (meta != null) {
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(entry.getUuid()));
+                // İsim (Siyah)
+                pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
+                        .hoverEvent(HoverEvent.showText(hover)));
 
-            // Rank'e göre isim rengi ve IA emoji
-            String rankEmoji = getRankEmoji(rank);
-            String rankColor = getRankColor(rank);
-            String displayName = rankColor + "§l#" + rank + " " + rankEmoji + " §f" + entry.getPlayerName();
-
-            meta.displayName(colorize(displayName));
-
-            // Lore
-            List<Component> lore = new ArrayList<>();
-            lore.add(colorize(""));
-            lore.add(colorize("§8▪ §7Sıralama: " + rankColor + "#" + rank));
-            lore.add(colorize("§8▪ §7Elo: §a§l" + entry.getElo()));
-            
-            String leagueTag = entry.getLeagueTag();
-            if (leagueTag != null && !leagueTag.isEmpty()) {
-                lore.add(colorize("§8▪ §7Lig: " + leagueTag));
-            }
-            
-            lore.add(colorize(""));
-            
-            // Top 3 için özel yazı
-            if (rank == 1) {
-                lore.add(colorize("§6§l⭐ BİRİNCİ ⭐"));
-            } else if (rank == 2) {
-                lore.add(colorize("§f§l🥈 İKİNCİ 🥈"));
-            } else if (rank == 3) {
-                lore.add(colorize("§c§l🥉 ÜÇÜNCÜ 🥉"));
+                // Elo (Yeşilimsi)
+                pb.append(Component.text(" " + elo, TextColor.color(0x55, 0xAA, 0x55)));
+                pb.append(Component.newline());
             }
 
-            meta.lore(lore);
-            skull.setItemMeta(meta);
-        }
-
-        return skull;
-    }
-
-    private ItemStack createSelfInfoHead(Player player, int yourRank, int yourElo, int totalPlayers) {
-        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) skull.getItemMeta();
-
-        if (meta != null) {
-            meta.setOwningPlayer(player);
-            
-            String rankEmoji = getRankEmojiByElo(yourElo);
-            meta.displayName(colorize("§e§l⭐ SENİN BİLGİLERİN ⭐"));
-
-            List<Component> lore = new ArrayList<>();
-            lore.add(colorize(""));
-            lore.add(colorize("§8▪ §7İsim: §f" + player.getName()));
-            lore.add(colorize("§8▪ §7Sıralama: §e#" + (yourRank > 0 ? yourRank : "?")));
-            lore.add(colorize("§8▪ §7Elo: §a§l" + yourElo));
-            lore.add(colorize("§8▪ §7Rank: " + rankEmoji));
-            lore.add(colorize(""));
-            lore.add(colorize("§7Top §e" + totalPlayers + " §7oyuncu arasındasın!"));
-            lore.add(colorize(""));
-
-            meta.lore(lore);
-            skull.setItemMeta(meta);
-        }
-
-        return skull;
-    }
-
-    private String getRankEmoji(int rank) {
-        if (rank == 1) return ":gold_rank:";
-        if (rank == 2) return ":iron_rank:";
-        if (rank == 3) return ":copper_rank:";
-        if (rank <= 10) return ":lapis_rank:";
-        if (rank <= 25) return ":emerald_rank:";
-        if (rank <= 50) return ":diamond_rank:";
-        return ":amethyst_rank:";
-    }
-
-    private String getRankEmojiByElo(int elo) {
-        if (elo >= 2800) return ":gold_rank:";
-        if (elo >= 1001) return ":iron_rank:";
-        return ":copper_rank:";
-    }
-
-    private String getRankColor(int rank) {
-        if (rank == 1) return "§6"; // Altın
-        if (rank == 2) return "§f"; // Beyaz (gümüş)
-        if (rank == 3) return "§c"; // Kırmızı (bronz)
-        if (rank <= 10) return "§e"; // Sarı
-        if (rank <= 25) return "§a"; // Yeşil
-        if (rank <= 50) return "§b"; // Açık mavi
-        return "§7"; // Gri
-    }
-
-    private ItemStack createGlassPane(Material material, String name) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(colorize(name));
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    private ItemStack createNavButton(Material material, String name, List<String> lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(colorize(name));
-            List<Component> componentLore = new ArrayList<>();
-            for (String line : lore) {
-                componentLore.add(colorize(line));
+            // ===== SON SAYFADA SEN BİLGİSİ =====
+            if (page == totalPages - 1) {
+                pb.append(Component.newline());
+                pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
+                pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
+                pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
+                        .decoration(TextDecoration.BOLD, true));
+                pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
+                pb.append(Component.text(yourElo + " ELO", TextColor.color(0x55, 0xAA, 0x55)));
             }
-            meta.lore(componentLore);
-            item.setItemMeta(meta);
+
+            pages.add(pb.build());
         }
-        return item;
+
+        Book book = Book.book(Component.text("Elo"), Component.text("Server"), pages);
+        player.openBook(book);
     }
 
     public static Component colorize(String text) {
         if (text == null) return Component.empty();
-        return LegacyComponentSerializer.legacySection().deserialize(
-            text.replace("&", "§")
-        );
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text.replace("&", "§"));
     }
 
-    public int getPlayerPage(UUID uuid) {
-        return playerPages.getOrDefault(uuid, 1);
-    }
-
-    public void removePlayer(UUID uuid) {
-        playerPages.remove(uuid);
-    }
-
-    // Eski kitap metodu - artık kullanılmıyor ama uyumluluk için kalıyor
-    public void openBook(Player player) {
-        openGUI(player, 1);
-    }
+    public int getPlayerPage(UUID uuid) { return 1; }
+    public void removePlayer(UUID uuid) { }
 }
