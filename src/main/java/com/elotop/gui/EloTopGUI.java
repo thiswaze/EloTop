@@ -2,6 +2,7 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
+import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -63,11 +64,17 @@ public class EloTopGUI {
                 int rank = i + 1;
                 int elo = entry.getElo();
 
-                // Rank emoji ve rengini al
-                RankInfo rankInfo = getRankInfo(elo);
-
-                // Emoji
-                pb.append(Component.text(" " + rankInfo.emoji + " ", rankInfo.color));
+                // ItemsAdder emoji al
+                String rankIcon = getRankIcon(elo);
+                
+                // Emoji ekle
+                if (rankIcon != null && !rankIcon.isEmpty()) {
+                    pb.append(Component.text(" "));
+                    pb.append(colorize(rankIcon));
+                    pb.append(Component.text(" "));
+                } else {
+                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
+                }
 
                 // Hover detay
                 String leagueTag = entry.getLeagueTag();
@@ -84,9 +91,6 @@ public class EloTopGUI {
                         .append(Component.text("Elo: ", NamedTextColor.GRAY))
                         .append(Component.text(elo, NamedTextColor.GREEN)
                                 .decoration(TextDecoration.BOLD, true))
-                        .append(Component.newline())
-                        .append(Component.text("Rank: ", NamedTextColor.GRAY))
-                        .append(Component.text(rankInfo.name, rankInfo.color))
                         .append(Component.newline())
                         .append(Component.text("Lig: ", NamedTextColor.GRAY))
                         .append(leagueTag != null && !leagueTag.isEmpty()
@@ -105,10 +109,13 @@ public class EloTopGUI {
             // Son sayfada oyuncunun bilgisi
             if (page == totalPages - 1) {
                 pb.append(Component.newline());
-                RankInfo yourRankInfo = getRankInfo(yourElo);
+                String yourIcon = getRankIcon(yourElo);
                 pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
                 pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
-                pb.append(Component.text(yourRankInfo.emoji + " ", yourRankInfo.color));
+                if (yourIcon != null && !yourIcon.isEmpty()) {
+                    pb.append(colorize(yourIcon));
+                    pb.append(Component.text(" "));
+                }
                 pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
@@ -127,50 +134,40 @@ public class EloTopGUI {
         player.openBook(book);
     }
 
-    private RankInfo getRankInfo(int elo) {
-        ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("rank-emojis.ranks");
-        
-        if (ranks == null || !plugin.getConfig().getBoolean("rank-emojis.enabled", true)) {
-            return new RankInfo("◈", "#AAAAAA", "Unknown");
+    /**
+     * Elo degerine gore ItemsAdder emoji string'i dondurur
+     */
+    private String getRankIcon(int elo) {
+        if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
+            return null;
         }
+
+        ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
+        if (ranks == null) return null;
 
         for (String rankKey : ranks.getKeys(false)) {
             int min = ranks.getInt(rankKey + ".min-elo", 0);
             int max = ranks.getInt(rankKey + ".max-elo", 999999);
-            
+
             if (elo >= min && elo <= max) {
-                String emoji = ranks.getString(rankKey + ".emoji", "◈");
-                String colorHex = ranks.getString(rankKey + ".color", "#AAAAAA");
-                String name = rankKey.substring(0, 1).toUpperCase() + rankKey.substring(1);
-                
-                return new RankInfo(emoji, colorHex, name);
+                String itemsAdderId = ranks.getString(rankKey + ".itemsadder-id", "");
+                if (!itemsAdderId.isEmpty()) {
+                    // ItemsAdder FontImage olarak kullan
+                    try {
+                        FontImageWrapper wrapper = new FontImageWrapper(itemsAdderId);
+                        if (wrapper.exists()) {
+                            return wrapper.getString();
+                        }
+                    } catch (Exception e) {
+                        // ItemsAdder yoksa veya hata varsa
+                        plugin.getLogger().warning("ItemsAdder icon bulunamadi: " + itemsAdderId);
+                    }
+                }
+                return null;
             }
         }
 
-        return new RankInfo("◈", "#AAAAAA", "Unknown");
-    }
-
-    private static class RankInfo {
-        final String emoji;
-        final TextColor color;
-        final String name;
-
-        RankInfo(String emoji, String hexColor, String name) {
-            this.emoji = emoji;
-            this.name = name;
-            
-            TextColor parsedColor;
-            if (hexColor.startsWith("#")) {
-                hexColor = hexColor.substring(1);
-            }
-            try {
-                int rgb = Integer.parseInt(hexColor, 16);
-                parsedColor = TextColor.color(rgb);
-            } catch (Exception e) {
-                parsedColor = NamedTextColor.GRAY;
-            }
-            this.color = parsedColor;
-        }
+        return null;
     }
 
     public static Component deserializeHex(String text) {
