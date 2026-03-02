@@ -39,7 +39,7 @@ public class PaperClickListener implements Listener {
         }
 
         plugin.getEloManager().updatePlayer(player);
-        plugin.getEloTopGUI().openBook(player);
+        plugin.getEloTopGUI().openGUI(player, 1);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
