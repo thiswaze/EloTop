@@ -8,6 +8,7 @@ depend:
   - PlaceholderAPI
 softdepend:
   - AlonsoLeagues
+  - ItemsAdder
 commands:
   elotop:
     description: Elo siralamasini acar
