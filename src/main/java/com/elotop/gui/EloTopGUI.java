@@ -1,121 +1,72 @@
-package com.elotop.gui;
+package com.elotop;
 
-import com.elotop.EloTopPlugin;
+import com.elotop.command.EloTopCommand;
+import com.elotop.gui.EloTopGUI;
+import com.elotop.listener.GUIClickListener;
+import com.elotop.listener.JoinListener;
+import com.elotop.listener.PaperClickListener;
 import com.elotop.manager.EloManager;
-import net.kyori.adventure.inventory.Book;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.*;
+public class EloTopPlugin extends JavaPlugin {
 
-public class EloTopGUI {
+    private static EloTopPlugin instance;
+    private EloManager eloManager;
+    private EloTopGUI eloTopGUI;
 
-    private final EloTopPlugin plugin;
+    @Override
+    public void onEnable() {
+        instance = this;
+        saveDefaultConfig();
 
-    public EloTopGUI(EloTopPlugin plugin) {
-        this.plugin = plugin;
-    }
-
-    public void openBook(Player player) {
-        List<EloManager.EloEntry> leaderboard = plugin.getEloManager().getLeaderboard();
-
-        if (leaderboard.isEmpty()) {
-            String prefix = plugin.getConfig().getString("messages.prefix", "&8[&6EloTop&8] ");
-            String msg = plugin.getConfig().getString("messages.no-data", "&cVeri yok!");
-            player.sendMessage(colorize(prefix + msg));
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            getLogger().severe("PlaceholderAPI bulunamadi! Plugin kapaniyor...");
+            getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        plugin.getEloManager().updatePlayer(player);
+        eloManager = new EloManager(this);
+        eloTopGUI = new EloTopGUI(this);
 
-        int playersPerPage = 10;
-        int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
+        getServer().getPluginManager().registerEvents(new JoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new PaperClickListener(this), this);
+        getServer().getPluginManager().registerEvents(new GUIClickListener(this), this);
 
-        int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
-        int yourElo = plugin.getEloManager().getPlayerEloLive(player);
+        EloTopCommand command = new EloTopCommand(this);
+        getCommand("elotop").setExecutor(command);
+        getCommand("elotopreload").setExecutor(command);
 
-        List<Component> pages = new ArrayList<>();
-
-        for (int page = 0; page < totalPages; page++) {
-            int startIndex = page * playersPerPage;
-            int endIndex = Math.min(startIndex + playersPerPage, leaderboard.size());
-
-            TextComponent.Builder pb = Component.text();
-
-            // ===== BAŞLIK =====
-            pb.append(Component.text("  ✦ ", TextColor.color(0xFF, 0xAA, 0x00)));
-            pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
-                    .decoration(TextDecoration.BOLD, true));
-            pb.append(Component.text(" ✦", TextColor.color(0xFF, 0xAA, 0x00)));
-            pb.append(Component.newline());
-            pb.append(Component.newline());
-
-            // ===== OYUNCULAR =====
-            for (int i = startIndex; i < endIndex; i++) {
-                EloManager.EloEntry entry = leaderboard.get(i);
-                int rank = i + 1;
-                int elo = entry.getElo();
-
-                // Top 3 özel emoji
-                if (rank == 1) {
-                    pb.append(Component.text(" ❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
-                } else if (rank == 2) {
-                    pb.append(Component.text(" ❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
-                } else if (rank == 3) {
-                    pb.append(Component.text(" ❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
-                } else {
-                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
-                }
-
-                // Hover detayları
-                Component hover = Component.text("")
-                        .append(Component.text(entry.getPlayerName(), NamedTextColor.WHITE)
-                                .decoration(TextDecoration.BOLD, true))
-                        .append(Component.newline())
-                        .append(Component.text("Sıra: ", NamedTextColor.GRAY))
-                        .append(Component.text("#" + rank, NamedTextColor.YELLOW))
-                        .append(Component.newline())
-                        .append(Component.text("Elo: ", NamedTextColor.GRAY))
-                        .append(Component.text(elo, NamedTextColor.GREEN));
-
-                // İsim (Siyah)
-                pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
-                        .hoverEvent(HoverEvent.showText(hover)));
-
-                // Elo (Yeşilimsi)
-                pb.append(Component.text(" " + elo, TextColor.color(0x55, 0xAA, 0x55)));
-                pb.append(Component.newline());
-            }
-
-            // ===== SON SAYFADA SEN BİLGİSİ =====
-            if (page == totalPages - 1) {
-                pb.append(Component.newline());
-                pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
-                pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
-                pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
-                        .decoration(TextDecoration.BOLD, true));
-                pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
-                pb.append(Component.text(yourElo + " ELO", TextColor.color(0x55, 0xAA, 0x55)));
-            }
-
-            pages.add(pb.build());
-        }
-
-        Book book = Book.book(Component.text("Elo"), Component.text("Server"), pages);
-        player.openBook(book);
+        startCacheTask();
+        startAutoSaveTask();
+        getLogger().info("EloTop plugin aktif!");
     }
 
-    public static Component colorize(String text) {
-        if (text == null) return Component.empty();
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(text.replace("&", "§"));
+    @Override
+    public void onDisable() {
+        if (eloManager != null) eloManager.shutdown();
     }
 
-    public int getPlayerPage(UUID uuid) { return 1; }
-    public void removePlayer(UUID uuid) { }
+    private void startCacheTask() {
+        long interval = getConfig().getLong("cache-update-interval", 60) * 20L;
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            getServer().getScheduler().runTask(this, () -> eloManager.updateCache());
+        }, 100L, interval);
+    }
+
+    private void startAutoSaveTask() {
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            getServer().getScheduler().runTask(this, () -> eloManager.saveData());
+        }, 6000L, 6000L);
+    }
+
+    public void reload() {
+        reloadConfig();
+        eloManager.saveData();
+        eloManager.clearCache();
+        getServer().getScheduler().runTask(this, () -> eloManager.updateCache());
+    }
+
+    public static EloTopPlugin getInstance() { return instance; }
+    public EloManager getEloManager() { return eloManager; }
+    public EloTopGUI getEloTopGUI() { return eloTopGUI; }
 }
