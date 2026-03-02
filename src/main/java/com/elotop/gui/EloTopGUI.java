@@ -127,14 +127,10 @@ public class EloTopGUI {
         player.openBook(book);
     }
 
-    /**
-     * Elo'ya gore rank bilgisini dondurur
-     */
     private RankInfo getRankInfo(int elo) {
         ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("rank-emojis.ranks");
         
         if (ranks == null || !plugin.getConfig().getBoolean("rank-emojis.enabled", true)) {
-            // Varsayilan
             return new RankInfo("◈", "#AAAAAA", "Unknown");
         }
 
@@ -151,13 +147,9 @@ public class EloTopGUI {
             }
         }
 
-        // Bulunamazsa varsayilan
         return new RankInfo("◈", "#AAAAAA", "Unknown");
     }
 
-    /**
-     * Rank bilgilerini tutan sinif
-     */
     private static class RankInfo {
         final String emoji;
         final TextColor color;
@@ -167,16 +159,17 @@ public class EloTopGUI {
             this.emoji = emoji;
             this.name = name;
             
-            // Hex rengi TextColor'a cevirme
+            TextColor parsedColor;
             if (hexColor.startsWith("#")) {
                 hexColor = hexColor.substring(1);
             }
             try {
                 int rgb = Integer.parseInt(hexColor, 16);
-                this.color = TextColor.color(rgb);
+                parsedColor = TextColor.color(rgb);
             } catch (Exception e) {
-                this.color = NamedTextColor.GRAY;
+                parsedColor = NamedTextColor.GRAY;
             }
+            this.color = parsedColor;
         }
     }
 
