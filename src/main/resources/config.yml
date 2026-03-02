@@ -1,11 +1,11 @@
 elo-placeholder: "%alonsoleagues_points%"
-league-placeholder: "%alonsoleagues_league_displayname%"
+league-placeholder: "%alonsoleagues_league_display%"
 
 auto-give-paper: true
 paper-slot: 8
 
 paper:
-  name: "&6&l⭐ &e&lELO SIRALAMA &6&l⭐"
+  name: "&6&l⭐ &b&lELO SIRALAMA &6&l⭐"
   lore:
     - ""
     - "&7Sag tiklayarak elo siralamasini"
@@ -23,7 +23,7 @@ messages:
   prefix: "&8[&6EloTop&8] "
   no-permission: "&cYetkin yok!"
   no-data: "&cHenuz elo verisi bulunamadi!"
-  
+
 # Rank emojileri ve elo araliklari
 rank-emojis:
   enabled: true
@@ -32,24 +32,24 @@ rank-emojis:
       min-elo: 0
       max-elo: 999
       emoji: "◈"
-      color: "#CD7F32"  # Kahverengi
+      color: "#CD7F32"
     silver:
       min-elo: 1000
       max-elo: 1999
       emoji: "◆"
-      color: "#C0C0C0"  # Gümüş
+      color: "#C0C0C0"
     gold:
       min-elo: 2000
       max-elo: 2999
       emoji: "★"
-      color: "#FFD700"  # Altın
+      color: "#FFD700"
     platinum:
       min-elo: 3000
       max-elo: 3999
       emoji: "✦"
-      color: "#00FFFF"  # Açık mavi
+      color: "#00FFFF"
     diamond:
       min-elo: 4000
       max-elo: 999999
       emoji: "❖"
-      color: "#B9F2FF"  # Elmas mavisi
+      color: "#B9F2FF"
