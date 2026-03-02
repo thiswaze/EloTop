@@ -2,7 +2,6 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
-import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -11,7 +10,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -64,17 +62,13 @@ public class EloTopGUI {
                 int rank = i + 1;
                 int elo = entry.getElo();
 
-                // ItemsAdder emoji al
-                String rankIcon = getRankIcon(elo);
-                
+                // Rank emoji al
+                String rankEmoji = getRankEmoji(elo);
+
                 // Emoji ekle
-                if (rankIcon != null && !rankIcon.isEmpty()) {
-                    pb.append(Component.text(" "));
-                    pb.append(colorize(rankIcon));
-                    pb.append(Component.text(" "));
-                } else {
-                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
-                }
+                pb.append(Component.text(" "));
+                pb.append(colorize(rankEmoji));
+                pb.append(Component.text(" "));
 
                 // Hover detay
                 String leagueTag = entry.getLeagueTag();
@@ -96,7 +90,7 @@ public class EloTopGUI {
                         .append(leagueTag != null && !leagueTag.isEmpty()
                                 ? deserializeHex(leagueTag) : Component.text("?", NamedTextColor.GRAY));
 
-                // Oyuncu ismi - siyah
+                // Oyuncu ismi
                 pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
                         .hoverEvent(HoverEvent.showText(hover)));
 
@@ -109,13 +103,11 @@ public class EloTopGUI {
             // Son sayfada oyuncunun bilgisi
             if (page == totalPages - 1) {
                 pb.append(Component.newline());
-                String yourIcon = getRankIcon(yourElo);
+                String yourEmoji = getRankEmoji(yourElo);
                 pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
                 pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
-                if (yourIcon != null && !yourIcon.isEmpty()) {
-                    pb.append(colorize(yourIcon));
-                    pb.append(Component.text(" "));
-                }
+                pb.append(colorize(yourEmoji));
+                pb.append(Component.text(" "));
                 pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
@@ -134,40 +126,20 @@ public class EloTopGUI {
         player.openBook(book);
     }
 
-    /**
-     * Elo degerine gore ItemsAdder emoji string'i dondurur
-     */
-    private String getRankIcon(int elo) {
-        if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
-            return null;
+    private String getRankEmoji(int elo) {
+        // Bronz: 0-1000
+        if (elo >= 0 && elo <= 1000) {
+            return ":copper_rank:";
         }
-
-        ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
-        if (ranks == null) return null;
-
-        for (String rankKey : ranks.getKeys(false)) {
-            int min = ranks.getInt(rankKey + ".min-elo", 0);
-            int max = ranks.getInt(rankKey + ".max-elo", 999999);
-
-            if (elo >= min && elo <= max) {
-                String itemsAdderId = ranks.getString(rankKey + ".itemsadder-id", "");
-                if (!itemsAdderId.isEmpty()) {
-                    // ItemsAdder FontImage olarak kullan
-                    try {
-                        FontImageWrapper wrapper = new FontImageWrapper(itemsAdderId);
-                        if (wrapper.exists()) {
-                            return wrapper.getString();
-                        }
-                    } catch (Exception e) {
-                        // ItemsAdder yoksa veya hata varsa
-                        plugin.getLogger().warning("ItemsAdder icon bulunamadi: " + itemsAdderId);
-                    }
-                }
-                return null;
-            }
+        // Gumus: 1001-2799
+        else if (elo >= 1001 && elo <= 2799) {
+            return ":iron_rank:";
         }
-
-        return null;
+        // Altin: 2800+
+        else if (elo >= 2800) {
+            return ":gold_rank:";
+        }
+        return ":copper_rank:";
     }
 
     public static Component deserializeHex(String text) {
