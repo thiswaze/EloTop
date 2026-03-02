@@ -10,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -37,7 +38,6 @@ public class EloTopGUI {
         int playersPerPage = 10;
         int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
 
-        // Oyuncunun kendi bilgisi
         int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
         int yourElo = plugin.getEloManager().getPlayerEloLive(player);
 
@@ -49,7 +49,7 @@ public class EloTopGUI {
 
             TextComponent.Builder pb = Component.text();
 
-            // ===== BASLIK =====
+            // Baslik
             pb.append(Component.text("  ✦ ", TextColor.color(0xFF, 0xAA, 0x00)));
             pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
                     .decoration(TextDecoration.BOLD, true));
@@ -57,21 +57,17 @@ public class EloTopGUI {
             pb.append(Component.newline());
             pb.append(Component.newline());
 
-            // ===== OYUNCULAR =====
+            // Oyuncular
             for (int i = startIndex; i < endIndex; i++) {
                 EloManager.EloEntry entry = leaderboard.get(i);
                 int rank = i + 1;
+                int elo = entry.getElo();
 
-                // Top 3 ozel emoji, digerleri normal numara
-                if (rank == 1) {
-                    pb.append(Component.text(" ❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
-                } else if (rank == 2) {
-                    pb.append(Component.text(" ❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
-                } else if (rank == 3) {
-                    pb.append(Component.text(" ❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
-                } else {
-                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
-                }
+                // Rank emoji ve rengini al
+                RankInfo rankInfo = getRankInfo(elo);
+
+                // Emoji
+                pb.append(Component.text(" " + rankInfo.emoji + " ", rankInfo.color));
 
                 // Hover detay
                 String leagueTag = entry.getLeagueTag();
@@ -79,13 +75,18 @@ public class EloTopGUI {
                         .append(Component.text(entry.getPlayerName(), NamedTextColor.WHITE)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
+                        .append(Component.text("━━━━━━━━━━━", NamedTextColor.DARK_GRAY))
+                        .append(Component.newline())
                         .append(Component.text("Sıra: ", NamedTextColor.GRAY))
                         .append(Component.text("#" + rank, NamedTextColor.YELLOW)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
                         .append(Component.text("Elo: ", NamedTextColor.GRAY))
-                        .append(Component.text(entry.getElo(), NamedTextColor.GREEN)
+                        .append(Component.text(elo, NamedTextColor.GREEN)
                                 .decoration(TextDecoration.BOLD, true))
+                        .append(Component.newline())
+                        .append(Component.text("Rank: ", NamedTextColor.GRAY))
+                        .append(Component.text(rankInfo.name, rankInfo.color))
                         .append(Component.newline())
                         .append(Component.text("Lig: ", NamedTextColor.GRAY))
                         .append(leagueTag != null && !leagueTag.isEmpty()
@@ -96,16 +97,18 @@ public class EloTopGUI {
                         .hoverEvent(HoverEvent.showText(hover)));
 
                 // Elo degeri
-                pb.append(Component.text(" " + entry.getElo(), TextColor.color(0x55, 0xAA, 0x55)));
+                pb.append(Component.text(" " + elo, TextColor.color(0x55, 0xAA, 0x55)));
 
                 pb.append(Component.newline());
             }
 
-            // ===== SON SAYFADA SEN BILGISI =====
+            // Son sayfada oyuncunun bilgisi
             if (page == totalPages - 1) {
                 pb.append(Component.newline());
+                RankInfo yourRankInfo = getRankInfo(yourElo);
                 pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
                 pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
+                pb.append(Component.text(yourRankInfo.emoji + " ", yourRankInfo.color));
                 pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
@@ -122,6 +125,59 @@ public class EloTopGUI {
         );
 
         player.openBook(book);
+    }
+
+    /**
+     * Elo'ya gore rank bilgisini dondurur
+     */
+    private RankInfo getRankInfo(int elo) {
+        ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("rank-emojis.ranks");
+        
+        if (ranks == null || !plugin.getConfig().getBoolean("rank-emojis.enabled", true)) {
+            // Varsayilan
+            return new RankInfo("◈", "#AAAAAA", "Unknown");
+        }
+
+        for (String rankKey : ranks.getKeys(false)) {
+            int min = ranks.getInt(rankKey + ".min-elo", 0);
+            int max = ranks.getInt(rankKey + ".max-elo", 999999);
+            
+            if (elo >= min && elo <= max) {
+                String emoji = ranks.getString(rankKey + ".emoji", "◈");
+                String colorHex = ranks.getString(rankKey + ".color", "#AAAAAA");
+                String name = rankKey.substring(0, 1).toUpperCase() + rankKey.substring(1);
+                
+                return new RankInfo(emoji, colorHex, name);
+            }
+        }
+
+        // Bulunamazsa varsayilan
+        return new RankInfo("◈", "#AAAAAA", "Unknown");
+    }
+
+    /**
+     * Rank bilgilerini tutan sinif
+     */
+    private static class RankInfo {
+        final String emoji;
+        final TextColor color;
+        final String name;
+
+        RankInfo(String emoji, String hexColor, String name) {
+            this.emoji = emoji;
+            this.name = name;
+            
+            // Hex rengi TextColor'a cevirme
+            if (hexColor.startsWith("#")) {
+                hexColor = hexColor.substring(1);
+            }
+            try {
+                int rgb = Integer.parseInt(hexColor, 16);
+                this.color = TextColor.color(rgb);
+            } catch (Exception e) {
+                this.color = NamedTextColor.GRAY;
+            }
+        }
     }
 
     public static Component deserializeHex(String text) {
