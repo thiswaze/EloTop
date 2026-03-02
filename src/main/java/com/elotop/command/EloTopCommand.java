@@ -53,7 +53,14 @@ public class EloTopCommand implements CommandExecutor, TabCompleter {
             }
 
             plugin.getEloManager().updatePlayer(player);
-            plugin.getEloTopGUI().openBook(player);
+
+            int page = 1;
+            if (args.length > 0) {
+                try { page = Integer.parseInt(args[0]); }
+                catch (NumberFormatException e) { page = 1; }
+            }
+
+            plugin.getEloTopGUI().openGUI(player, page);
             return true;
         }
         return false;
