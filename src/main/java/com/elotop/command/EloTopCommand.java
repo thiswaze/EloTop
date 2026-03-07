@@ -1,14 +1,20 @@
 package com.elotop.command;
 
 import com.elotop.EloTopPlugin;
+import com.elotop.gui.EloTopGUI;
 import com.elotop.listener.JoinListener;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class EloTopCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.List;
+
+public class EloTopCommand implements CommandExecutor, TabCompleter {
 
     private final EloTopPlugin plugin;
 
@@ -17,19 +23,45 @@ public class EloTopCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
+                             @NotNull String label, @NotNull String[] args) {
+
+        String prefix = plugin.getConfig().getString("messages.prefix", "&8[&6EloTop&8] ");
+
         if (command.getName().equalsIgnoreCase("elotopreload")) {
-            if (!sender.hasPermission("elotop.admin")) return true;
+            if (!sender.hasPermission("elotop.admin")) {
+                sender.sendMessage(EloTopGUI.colorize(prefix + "&cYetkin yok!"));
+                return true;
+            }
             plugin.reload();
-            sender.sendMessage("§aEloTop reload basarili!");
+            sender.sendMessage(EloTopGUI.colorize(prefix + "&aConfig yeniden yuklendi!"));
+            if (sender instanceof Player) {
+                JoinListener listener = new JoinListener(plugin);
+                plugin.getServer().getOnlinePlayers().forEach(listener::giveEloPaper);
+            }
             return true;
         }
 
-        if (sender instanceof Player player) {
-            if (!player.hasPermission("elotop.use")) return true;
+        if (command.getName().equalsIgnoreCase("elotop")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(EloTopGUI.colorize(prefix + "&cSadece oyuncular kullanabilir!"));
+                return true;
+            }
+            if (!player.hasPermission("elotop.use")) {
+                player.sendMessage(EloTopGUI.colorize(prefix + "&cYetkin yok!"));
+                return true;
+            }
+
             plugin.getEloManager().updatePlayer(player);
             plugin.getEloTopGUI().openBook(player);
+            return true;
         }
-        return true;
+        return false;
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+            @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+        return new ArrayList<>();
     }
 }
