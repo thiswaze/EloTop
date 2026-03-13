@@ -2,7 +2,6 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
-import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -18,9 +17,50 @@ import java.util.*;
 public class EloTopGUI {
 
     private final EloTopPlugin plugin;
+    // ItemsAdder emoji cache
+    private final Map<String, String> emojiCache = new HashMap<>();
 
     public EloTopGUI(EloTopPlugin plugin) {
         this.plugin = plugin;
+        loadEmojiCache();
+    }
+
+    /**
+     * ItemsAdder emojilerini onceden yukle
+     */
+    private void loadEmojiCache() {
+        try {
+            Class<?> fontImageClass = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+            
+            ConfigurationSection ranksSection = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
+            if (ranksSection != null) {
+                for (String rankKey : ranksSection.getKeys(false)) {
+                    String emoji = ranksSection.getString(rankKey + ".emoji", "");
+                    if (!emoji.isEmpty()) {
+                        String cleanName = emoji.replace(":", "");
+                        try {
+                            Object fontWrapper = fontImageClass.getConstructor(String.class).newInstance(cleanName);
+                            boolean exists = (boolean) fontImageClass.getMethod("exists").invoke(fontWrapper);
+                            if (exists) {
+                                String character = (String) fontImageClass.getMethod("getString").invoke(fontWrapper);
+                                emojiCache.put(emoji, character);
+                                plugin.getLogger().info("Emoji yuklendi: " + emoji + " -> " + character);
+                            }
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Emoji yuklenemedi: " + cleanName);
+                        }
+                    }
+                }
+            }
+            
+            if (!emojiCache.isEmpty()) {
+                plugin.getLogger().info(emojiCache.size() + " emoji basariyla yuklendi!");
+            } else {
+                plugin.getLogger().warning("Hicbir emoji yuklenemedi!");
+            }
+        } catch (ClassNotFoundException e) {
+            plugin.getLogger().severe("ItemsAdder API bulunamadi!");
+        }
     }
 
     public void openBook(Player player) {
@@ -63,13 +103,13 @@ public class EloTopGUI {
                 int rank = i + 1;
                 int elo = entry.getElo();
 
-                // Sıra numarası: "1: " formatında
+                // Sıra numarası
                 pb.append(Component.text(rank + ": ", NamedTextColor.DARK_GRAY));
 
                 // Rank emojisi
-                Component emojiComponent = getEmojiComponent(elo);
-                if (emojiComponent != null) {
-                    pb.append(emojiComponent);
+                String emoji = getEmojiForElo(elo);
+                if (emoji != null) {
+                    pb.append(Component.text(emoji));
                     pb.append(Component.text(" "));
                 }
 
@@ -107,9 +147,9 @@ public class EloTopGUI {
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
 
-                Component yourEmoji = getEmojiComponent(yourElo);
+                String yourEmoji = getEmojiForElo(yourElo);
                 if (yourEmoji != null) {
-                    pb.append(yourEmoji);
+                    pb.append(Component.text(yourEmoji));
                     pb.append(Component.text(" "));
                 }
                 pb.append(Component.text(yourElo + " ELO", NamedTextColor.GREEN));
@@ -127,7 +167,10 @@ public class EloTopGUI {
         player.openBook(book);
     }
 
-    private Component getEmojiComponent(int elo) {
+    /**
+     * Elo degerine gore emoji karakterini dondurur
+     */
+    private String getEmojiForElo(int elo) {
         if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
             return null;
         }
@@ -135,31 +178,14 @@ public class EloTopGUI {
         ConfigurationSection ranksSection = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
         if (ranksSection == null) return null;
 
-        String emojiName = null;
-
         for (String rankKey : ranksSection.getKeys(false)) {
             int minElo = ranksSection.getInt(rankKey + ".min-elo", 0);
             int maxElo = ranksSection.getInt(rankKey + ".max-elo", 999999);
 
             if (elo >= minElo && elo <= maxElo) {
-                emojiName = ranksSection.getString(rankKey + ".emoji", "");
-                break;
+                String emojiKey = ranksSection.getString(rankKey + ".emoji", "");
+                return emojiCache.getOrDefault(emojiKey, null);
             }
-        }
-
-        if (emojiName == null || emojiName.isEmpty()) return null;
-
-        // ItemsAdder emoji'yi al
-        try {
-            if (plugin.getServer().getPluginManager().getPlugin("ItemsAdder") != null) {
-                String cleanName = emojiName.replace(":", "");
-                FontImageWrapper fontImage = new FontImageWrapper(cleanName);
-                if (fontImage.exists()) {
-                    return Component.text(fontImage.getString());
-                }
-            }
-        } catch (Exception e) {
-            // Hata varsa null dön
         }
 
         return null;
