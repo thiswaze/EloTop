@@ -25,58 +25,48 @@ messages:
   no-data: "&cHenuz elo verisi bulunamadi!"
 
 # ItemsAdder Rank Emojileri
-# Elo araligina gore hangi ItemsAdder item kullanilacak
 rank-icons:
   enabled: true
   ranks:
     # Bronz
-    bronze-5:
+    rank1:
       min-elo: 0
       max-elo: 349
-      itemsadder-id: "rank_badge:rank_lv6"
-    bronze-4:
+      emoji: ":rank1:"
+    rank2:
       min-elo: 350
       max-elo: 499
-      itemsadder-id: "rank_badge:rank_lv5"
-    bronze-3:
+      emoji: ":rank2:"
+    rank3:
       min-elo: 500
       max-elo: 749
-      itemsadder-id: "rank_badge:rank_lv3"
-    bronze-2:
+      emoji: ":rank3:"
+    rank4:
       min-elo: 750
       max-elo: 999
-      itemsadder-id: "rank_badge:rank_lv2"
-    bronze-1:
+      emoji: ":rank4:"
+    rank5:
       min-elo: 1000
       max-elo: 1000
-      itemsadder-id: "rank_badge:rank_lv1"
-    # Gumus
-    silver-5:
+      emoji: ":rank5:"
+    # Silver
+    rank11:
       min-elo: 1001
       max-elo: 1359
-      itemsadder-id: "rank_badge:rank_lv16"
-    silver-4:
+      emoji: ":rank11:"
+    rank12:
       min-elo: 1360
       max-elo: 1719
-      itemsadder-id: "rank_badge:rank_lv15"
-    silver-3:
+      emoji: ":rank12:"
+    rank13:
       min-elo: 1720
       max-elo: 2079
-      itemsadder-id: "rank_badge:rank_lv13"
-    silver-2:
+      emoji: ":rank13:"
+    rank14:
       min-elo: 2080
       max-elo: 2439
-      itemsadder-id: "rank_badge:rank_lv12"
-    silver-1:
+      emoji: ":rank14:"
+    rank15:
       min-elo: 2440
-      max-elo: 2799
-      itemsadder-id: "rank_badge:rank_lv11"
-    # Altin
-    gold-5:
-      min-elo: 2800
-      max-elo: 3159
-      itemsadder-id: "rank_badge:rank_lv26"
-    gold-4:
-      min-elo: 3160
       max-elo: 999999
-      itemsadder-id: "rank_badge:rank_lv25"
+      emoji: ":rank15:"
