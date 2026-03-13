@@ -2,14 +2,15 @@ package com.elotop.gui;
 
 import com.elotop.EloTopPlugin;
 import com.elotop.manager.EloManager;
+import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -37,7 +38,6 @@ public class EloTopGUI {
         int playersPerPage = 10;
         int totalPages = (int) Math.ceil((double) leaderboard.size() / playersPerPage);
 
-        // Oyuncunun kendi bilgisi
         int yourRank = plugin.getEloManager().getPlayerRank(player.getUniqueId());
         int yourElo = plugin.getEloManager().getPlayerEloLive(player);
 
@@ -50,10 +50,10 @@ public class EloTopGUI {
             TextComponent.Builder pb = Component.text();
 
             // ===== BASLIK =====
-            pb.append(Component.text("  ✦ ", TextColor.color(0xFF, 0xAA, 0x00)));
+            pb.append(Component.text("  ✦ ", NamedTextColor.GOLD));
             pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
                     .decoration(TextDecoration.BOLD, true));
-            pb.append(Component.text(" ✦", TextColor.color(0xFF, 0xAA, 0x00)));
+            pb.append(Component.text(" ✦", NamedTextColor.GOLD));
             pb.append(Component.newline());
             pb.append(Component.newline());
 
@@ -61,16 +61,16 @@ public class EloTopGUI {
             for (int i = startIndex; i < endIndex; i++) {
                 EloManager.EloEntry entry = leaderboard.get(i);
                 int rank = i + 1;
+                int elo = entry.getElo();
 
-                // Top 3 ozel emoji, digerleri normal numara
-                if (rank == 1) {
-                    pb.append(Component.text(" ❶ ", TextColor.color(0xFF, 0xD7, 0x00)));
-                } else if (rank == 2) {
-                    pb.append(Component.text(" ❷ ", TextColor.color(0xC0, 0xC0, 0xC0)));
-                } else if (rank == 3) {
-                    pb.append(Component.text(" ❸ ", TextColor.color(0xCD, 0x7F, 0x32)));
-                } else {
-                    pb.append(Component.text(" #" + rank + " ", NamedTextColor.DARK_GRAY));
+                // Sıra numarası: "1: " formatında
+                pb.append(Component.text(rank + ": ", NamedTextColor.DARK_GRAY));
+
+                // Rank emojisi
+                Component emojiComponent = getEmojiComponent(elo);
+                if (emojiComponent != null) {
+                    pb.append(emojiComponent);
+                    pb.append(Component.text(" "));
                 }
 
                 // Hover detay
@@ -84,19 +84,16 @@ public class EloTopGUI {
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
                         .append(Component.text("Elo: ", NamedTextColor.GRAY))
-                        .append(Component.text(entry.getElo(), NamedTextColor.GREEN)
+                        .append(Component.text(elo, NamedTextColor.GREEN)
                                 .decoration(TextDecoration.BOLD, true))
                         .append(Component.newline())
                         .append(Component.text("Lig: ", NamedTextColor.GRAY))
                         .append(leagueTag != null && !leagueTag.isEmpty()
                                 ? deserializeHex(leagueTag) : Component.text("?", NamedTextColor.GRAY));
 
-                // Oyuncu ismi - siyah
+                // Oyuncu ismi
                 pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
                         .hoverEvent(HoverEvent.showText(hover)));
-
-                // Elo degeri
-                pb.append(Component.text(" " + entry.getElo(), TextColor.color(0x55, 0xAA, 0x55)));
 
                 pb.append(Component.newline());
             }
@@ -104,12 +101,18 @@ public class EloTopGUI {
             // ===== SON SAYFADA SEN BILGISI =====
             if (page == totalPages - 1) {
                 pb.append(Component.newline());
-                pb.append(Component.text(" ★ ", TextColor.color(0xFF, 0xAA, 0x00)));
+                pb.append(Component.text(" ★ ", NamedTextColor.GOLD));
                 pb.append(Component.text("Sen: ", NamedTextColor.DARK_GRAY));
                 pb.append(Component.text("#" + (yourRank > 0 ? yourRank : "?"), NamedTextColor.YELLOW)
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
-                pb.append(Component.text(yourElo + " ELO", TextColor.color(0x55, 0xAA, 0x55)));
+
+                Component yourEmoji = getEmojiComponent(yourElo);
+                if (yourEmoji != null) {
+                    pb.append(yourEmoji);
+                    pb.append(Component.text(" "));
+                }
+                pb.append(Component.text(yourElo + " ELO", NamedTextColor.GREEN));
             }
 
             pages.add(pb.build());
@@ -122,6 +125,44 @@ public class EloTopGUI {
         );
 
         player.openBook(book);
+    }
+
+    private Component getEmojiComponent(int elo) {
+        if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
+            return null;
+        }
+
+        ConfigurationSection ranksSection = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
+        if (ranksSection == null) return null;
+
+        String emojiName = null;
+
+        for (String rankKey : ranksSection.getKeys(false)) {
+            int minElo = ranksSection.getInt(rankKey + ".min-elo", 0);
+            int maxElo = ranksSection.getInt(rankKey + ".max-elo", 999999);
+
+            if (elo >= minElo && elo <= maxElo) {
+                emojiName = ranksSection.getString(rankKey + ".emoji", "");
+                break;
+            }
+        }
+
+        if (emojiName == null || emojiName.isEmpty()) return null;
+
+        // ItemsAdder emoji'yi al
+        try {
+            if (plugin.getServer().getPluginManager().getPlugin("ItemsAdder") != null) {
+                String cleanName = emojiName.replace(":", "");
+                FontImageWrapper fontImage = new FontImageWrapper(cleanName);
+                if (fontImage.exists()) {
+                    return Component.text(fontImage.getString());
+                }
+            }
+        } catch (Exception e) {
+            // Hata varsa null dön
+        }
+
+        return null;
     }
 
     public static Component deserializeHex(String text) {
