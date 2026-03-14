@@ -66,8 +66,8 @@ public class EloTopGUI {
                 // Sıra numarası
                 pb.append(Component.text(rank + ": ", NamedTextColor.DARK_GRAY));
 
-                // Rank emojisi - PlaceholderAPI ile al (BEYAZ RENK)
-                String emoji = getEmojiForElo(elo, player);
+                // Rank emojisi - Lig bazli
+                String emoji = getEmojiForLeague(entry.getLeagueTag(), player);
                 if (emoji != null && !emoji.isEmpty()) {
                     pb.append(Component.text(emoji + " ").color(NamedTextColor.WHITE));
                 }
@@ -106,7 +106,10 @@ public class EloTopGUI {
                         .decoration(TextDecoration.BOLD, true));
                 pb.append(Component.text(" | ", NamedTextColor.DARK_GRAY));
 
-                String yourEmoji = getEmojiForElo(yourElo, player);
+                // Senin ligin - canli al
+                String yourLeague = PlaceholderAPI.setPlaceholders(player,
+                        plugin.getConfig().getString("league-placeholder", "%alonsoleagues_league_display%"));
+                String yourEmoji = getEmojiForLeague(yourLeague, player);
                 if (yourEmoji != null && !yourEmoji.isEmpty()) {
                     pb.append(Component.text(yourEmoji + " ").color(NamedTextColor.WHITE));
                 }
@@ -126,42 +129,89 @@ public class EloTopGUI {
     }
 
     /**
-     * Elo'ya gore emoji al - PlaceholderAPI ile
+     * Lig ismine gore emoji al
      */
-    private String getEmojiForElo(int elo, Player player) {
+    private String getEmojiForLeague(String leagueDisplay, Player player) {
         if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
             return null;
         }
+        if (leagueDisplay == null || leagueDisplay.isEmpty()) {
+            return null;
+        }
 
-        ConfigurationSection ranksSection = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
-        if (ranksSection == null) return null;
+        // Renk kodlarini temizle
+        String cleanLeague = stripColors(leagueDisplay).toUpperCase().trim();
 
-        for (String rankKey : ranksSection.getKeys(false)) {
-            int minElo = ranksSection.getInt(rankKey + ".min-elo", 0);
-            int maxElo = ranksSection.getInt(rankKey + ".max-elo", 999999);
+        ConfigurationSection leaguesSection = plugin.getConfig().getConfigurationSection("rank-icons.leagues");
+        if (leaguesSection == null) return null;
 
-            if (elo >= minElo && elo <= maxElo) {
-                String emojiPlaceholder = ranksSection.getString(rankKey + ".placeholder", "");
+        for (String leagueKey : leaguesSection.getKeys(false)) {
+            String configLeague = leagueKey.toUpperCase().trim();
+
+            // Eslesme kontrol
+            if (cleanLeague.contains(configLeague) || configLeague.contains(cleanLeague)
+                    || matchLeague(cleanLeague, configLeague)) {
                 
-                if (emojiPlaceholder.isEmpty()) {
-                    // Fallback - emoji name'den placeholder olustur
-                    String emojiName = ranksSection.getString(rankKey + ".emoji", "").replace(":", "");
-                    emojiPlaceholder = "%img_" + emojiName + "%";
+                String placeholder = leaguesSection.getString(leagueKey + ".placeholder", "");
+                if (!placeholder.isEmpty()) {
+                    String parsed = PlaceholderAPI.setPlaceholders(player, placeholder);
+                    if (parsed != null && !parsed.equals(placeholder)) {
+                        return parsed;
+                    }
                 }
-
-                // PlaceholderAPI ile parse et
-                String parsed = PlaceholderAPI.setPlaceholders(player, emojiPlaceholder);
-                
-                // Eger placeholder parse edilmisse (degismisse), dondur
-                if (parsed != null && !parsed.equals(emojiPlaceholder)) {
-                    return parsed;
-                }
-                
                 return null;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Lig isimlerini eslestirir
+     * "BRONZ [II]" ile "BRONZ_2" veya "BRONZ2" eslesir
+     */
+    private boolean matchLeague(String display, String configKey) {
+        // Tum ozel karakterleri temizle
+        String cleanDisplay = display.replaceAll("[^A-Za-z0-9ÜĞŞÇÖİüğşçöı]", "").toUpperCase();
+        String cleanConfig = configKey.replaceAll("[^A-Za-z0-9ÜĞŞÇÖİüğşçöı]", "").toUpperCase();
+
+        // Roman rakamlarini sayiya cevir
+        cleanDisplay = romanToNumber(cleanDisplay);
+        cleanConfig = romanToNumber(cleanConfig);
+
+        return cleanDisplay.equals(cleanConfig);
+    }
+
+    /**
+     * Roman rakamlarini sayiya cevirir
+     * BRONZII -> BRONZ2, BRONZV -> BRONZ5
+     */
+    private String romanToNumber(String text) {
+        return text
+                .replace("VIII", "8")
+                .replace("VII", "7")
+                .replace("VI", "6")
+                .replace("IV", "4")
+                .replace("IX", "9")
+                .replace("III", "3")
+                .replace("II", "2")
+                .replace("V", "5")
+                .replace("I", "1")
+                .replace("X", "10");
+    }
+
+    /**
+     * Renk kodlarini temizler
+     */
+    private String stripColors(String text) {
+        if (text == null) return "";
+        // &l, &7, &f gibi kodlari temizle
+        String stripped = text.replaceAll("&[0-9a-fk-orA-FK-OR]", "");
+        // #RRGGBB hex kodlarini temizle
+        stripped = stripped.replaceAll("#[0-9A-Fa-f]{6}", "");
+        // § kodlarini temizle
+        stripped = stripped.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        return stripped;
     }
 
     public static Component deserializeHex(String text) {
