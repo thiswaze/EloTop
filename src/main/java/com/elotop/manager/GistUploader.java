@@ -67,7 +67,10 @@ public class GistUploader {
     private void updateGist(String jsonContent) throws Exception {
         URL url = new URL("https://api.github.com/gists/" + gistId);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("PATCH");
+
+        // PATCH workaround - Windows eski versiyonlarda PATCH desteklenmiyor
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("X-HTTP-Method-Override", "PATCH");
         conn.setRequestProperty("Authorization", "token " + githubToken);
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
