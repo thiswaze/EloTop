@@ -13,6 +13,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.util.*;
 
 public class EloTopGUI {
@@ -20,28 +21,26 @@ public class EloTopGUI {
     private final EloTopPlugin plugin;
     private final Map<String, String> emojiCache = new HashMap<>();
     private boolean cacheLoaded = false;
-    private boolean itemsAdderAvailable = false;
 
     public EloTopGUI(EloTopPlugin plugin) {
         this.plugin = plugin;
-        // ItemsAdder tamamen yuklenene kadar bekle (15 saniye)
-        plugin.getServer().getScheduler().runTaskLater(plugin, this::loadEmojiCache, 300L);
+        plugin.getServer().getScheduler().runTaskLater(plugin, this::loadEmojiCache, 400L);
     }
 
-    /**
-     * ItemsAdder emojilerini yukle - TUM YONTEMLERI DENE
-     */
     public void loadEmojiCache() {
         emojiCache.clear();
+        plugin.getLogger().info("===========================================");
         plugin.getLogger().info("ItemsAdder emoji yuklemesi basliyor...");
+        plugin.getLogger().info("===========================================");
 
-        // ItemsAdder yuklü mü kontrol et
         if (plugin.getServer().getPluginManager().getPlugin("ItemsAdder") == null) {
-            plugin.getLogger().warning("ItemsAdder bulunamadi!");
+            plugin.getLogger().severe("ItemsAdder YUKLENMEMIS!");
             return;
         }
 
-        itemsAdderAvailable = true;
+        // Hangi class'lar mevcut kontrol et
+        checkAvailableClasses();
+
         String namespace = plugin.getConfig().getString("rank-icons.namespace", "rankicons");
         ConfigurationSection ranksSection = plugin.getConfig().getConfigurationSection("rank-icons.ranks");
 
@@ -50,147 +49,185 @@ public class EloTopGUI {
             return;
         }
 
-        for (String rankKey : ranksSection.getKeys(false)) {
-            String emoji = ranksSection.getString(rankKey + ".emoji", "");
-            if (emoji.isEmpty()) continue;
+        // Sadece rank1 ile test et
+        String testEmoji = ":rank1:";
+        String testName = "rank1";
+        
+        plugin.getLogger().info("TEST: " + testEmoji + " yukleniyor...");
+        plugin.getLogger().info("Namespace: " + namespace);
+        plugin.getLogger().info("Name: " + testName);
+        plugin.getLogger().info("Full: " + namespace + ":" + testName);
 
-            String cleanName = emoji.replace(":", "");
-            String fullName = namespace + ":" + cleanName;
+        String character = null;
 
-            String character = null;
-
-            // YONTEM 1: FontImageWrapper.getString()
-            character = tryFontImageWrapper(fullName);
-            if (character != null) {
-                emojiCache.put(emoji, character);
-                plugin.getLogger().info("[Method1] Emoji yuklendi: " + emoji);
-                continue;
-            }
-
-            // YONTEM 2: FontImageWrapper sadece isimle (namespace'siz)
-            character = tryFontImageWrapper(cleanName);
-            if (character != null) {
-                emojiCache.put(emoji, character);
-                plugin.getLogger().info("[Method2] Emoji yuklendi: " + emoji);
-                continue;
-            }
-
-            // YONTEM 3: TexturedCharacter API
-            character = tryTexturedCharacter(fullName);
-            if (character != null) {
-                emojiCache.put(emoji, character);
-                plugin.getLogger().info("[Method3] Emoji yuklendi: " + emoji);
-                continue;
-            }
-
-            // YONTEM 4: PlayerCustomImageFont API
-            character = tryPlayerCustomImageFont(fullName);
-            if (character != null) {
-                emojiCache.put(emoji, character);
-                plugin.getLogger().info("[Method4] Emoji yuklendi: " + emoji);
-                continue;
-            }
-
-            // YONTEM 5: FontImage API (eski)
-            character = tryFontImage(fullName);
-            if (character != null) {
-                emojiCache.put(emoji, character);
-                plugin.getLogger().info("[Method5] Emoji yuklendi: " + emoji);
-                continue;
-            }
-
-            plugin.getLogger().warning("Emoji yuklenemedi (tum yontemler basarisiz): " + fullName);
+        // YONTEM 1
+        plugin.getLogger().info("--- YONTEM 1: FontImageWrapper(namespace:name) ---");
+        character = tryFontImageWrapper(namespace + ":" + testName, true);
+        if (character != null) {
+            plugin.getLogger().info("BASARILI! Karakter: " + character);
+            emojiCache.put(testEmoji, character);
         }
 
-        if (!emojiCache.isEmpty()) {
-            plugin.getLogger().info("BASARILI! " + emojiCache.size() + " emoji yuklendi!");
-            cacheLoaded = true;
+        // YONTEM 2
+        if (character == null) {
+            plugin.getLogger().info("--- YONTEM 2: FontImageWrapper(name) ---");
+            character = tryFontImageWrapper(testName, true);
+            if (character != null) {
+                plugin.getLogger().info("BASARILI! Karakter: " + character);
+                emojiCache.put(testEmoji, character);
+            }
+        }
+
+        // YONTEM 3
+        if (character == null) {
+            plugin.getLogger().info("--- YONTEM 3: FontImageWrapper constructor parametreleri ---");
+            character = tryFontImageWrapperAlt(namespace, testName);
+            if (character != null) {
+                plugin.getLogger().info("BASARILI! Karakter: " + character);
+                emojiCache.put(testEmoji, character);
+            }
+        }
+
+        // YONTEM 4 - Tum emojileri yukle
+        if (character != null) {
+            plugin.getLogger().info("=== ILK TEST BASARILI! Diger emojiler yukleniyor... ===");
+            loadAllEmojis(ranksSection, namespace);
         } else {
-            plugin.getLogger().severe("HICBIR EMOJI YUKLENEMEDI! Alternatif sistem aktif edilecek.");
+            plugin.getLogger().severe("=== HICBIR YONTEM CALISMADI ===");
+        }
+
+        plugin.getLogger().info("===========================================");
+        plugin.getLogger().info("Yuklenen emoji sayisi: " + emojiCache.size());
+        plugin.getLogger().info("===========================================");
+        
+        cacheLoaded = !emojiCache.isEmpty();
+    }
+
+    private void checkAvailableClasses() {
+        String[] classes = {
+            "dev.lone.itemsadder.api.FontImages.FontImageWrapper",
+            "dev.lone.itemsadder.api.FontImages.TexturedCharacter",
+            "dev.lone.itemsadder.api.FontImages.FontImage",
+            "dev.lone.itemsadder.api.CustomStack",
+            "dev.lone.itemsadder.api.ItemsAdder"
+        };
+
+        plugin.getLogger().info("--- Mevcut ItemsAdder Class'lari ---");
+        for (String className : classes) {
+            try {
+                Class<?> clazz = Class.forName(className);
+                plugin.getLogger().info("✓ " + className);
+                
+                // FontImageWrapper ise method'lari listele
+                if (className.contains("FontImageWrapper")) {
+                    plugin.getLogger().info("  Methods:");
+                    for (Method m : clazz.getMethods()) {
+                        if (m.getDeclaringClass() == clazz) {
+                            plugin.getLogger().info("    - " + m.getName() + "()");
+                        }
+                    }
+                    plugin.getLogger().info("  Constructors:");
+                    for (Constructor<?> c : clazz.getConstructors()) {
+                        plugin.getLogger().info("    - " + Arrays.toString(c.getParameterTypes()));
+                    }
+                }
+            } catch (ClassNotFoundException e) {
+                plugin.getLogger().info("✗ " + className + " (BULUNAMADI)");
+            }
         }
     }
 
-    // YONTEM 1: FontImageWrapper
-    private String tryFontImageWrapper(String name) {
+    private String tryFontImageWrapper(String name, boolean debug) {
         try {
             Class<?> clazz = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+            
+            if (debug) plugin.getLogger().info("  Creating wrapper for: " + name);
+            
             Object wrapper = clazz.getConstructor(String.class).newInstance(name);
             
-            Method existsMethod = clazz.getMethod("exists");
-            boolean exists = (boolean) existsMethod.invoke(wrapper);
-            
-            if (exists) {
-                Method getStringMethod = clazz.getMethod("getString");
-                return (String) getStringMethod.invoke(wrapper);
+            if (debug) plugin.getLogger().info("  Wrapper created: " + wrapper);
+
+            // exists() kontrol
+            try {
+                Method existsMethod = clazz.getMethod("exists");
+                boolean exists = (boolean) existsMethod.invoke(wrapper);
+                if (debug) plugin.getLogger().info("  exists() = " + exists);
+                if (!exists) return null;
+            } catch (Exception e) {
+                if (debug) plugin.getLogger().info("  exists() method yok veya hata: " + e.getMessage());
             }
+
+            // Tum get methodlarini dene
+            String[] methods = {"getString", "getCharacter", "getChar", "getValue", "getSymbol", "replaceFontImages"};
+            for (String methodName : methods) {
+                try {
+                    Method m = clazz.getMethod(methodName);
+                    Object result = m.invoke(wrapper);
+                    if (debug) plugin.getLogger().info("  " + methodName + "() = " + result);
+                    if (result != null && !result.toString().isEmpty() && !result.toString().equals(name)) {
+                        return result.toString();
+                    }
+                } catch (Exception e) {
+                    if (debug) plugin.getLogger().info("  " + methodName + "() = HATA: " + e.getMessage());
+                }
+            }
+
         } catch (Exception e) {
-            // Bu yontem calismadi
+            if (debug) plugin.getLogger().info("  GENEL HATA: " + e.getMessage());
         }
         return null;
     }
 
-    // YONTEM 2: TexturedCharacter
-    private String tryTexturedCharacter(String name) {
+    private String tryFontImageWrapperAlt(String namespace, String name) {
         try {
-            Class<?> clazz = Class.forName("dev.lone.itemsadder.api.FontImages.TexturedCharacter");
-            Method getMethod = clazz.getMethod("getByKey", String.class);
-            Object result = getMethod.invoke(null, name);
+            Class<?> clazz = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
             
-            if (result != null) {
-                Method getCharMethod = clazz.getMethod("getCharacter");
-                return (String) getCharMethod.invoke(result);
-            }
-        } catch (Exception e) {
-            // Bu yontem calismadi
-        }
-        return null;
-    }
-
-    // YONTEM 3: PlayerCustomImageFont (ItemsAdder 4.x)
-    private String tryPlayerCustomImageFont(String name) {
-        try {
-            Class<?> clazz = Class.forName("dev.lone.itemsadder.api.FontImages.PlayerCustomImageFont");
-            Method getMethod = clazz.getMethod("get", String.class);
-            Object result = getMethod.invoke(null, name);
-            
-            if (result != null) {
-                Method getCharMethod = clazz.getMethod("getCharacter");
-                return (String) getCharMethod.invoke(result);
-            }
-        } catch (Exception e) {
-            // Bu yontem calismadi
-        }
-        return null;
-    }
-
-    // YONTEM 4: FontImage (eski API)
-    private String tryFontImage(String name) {
-        try {
-            Class<?> clazz = Class.forName("dev.lone.itemsadder.api.FontImages.FontImage");
-            Method getMethod = clazz.getMethod("get", String.class);
-            Object result = getMethod.invoke(null, name);
-            
-            if (result != null) {
-                // Farkli method isimleri dene
-                for (String methodName : new String[]{"getCharacter", "getString", "getChar", "getValue"}) {
+            // 2 parametreli constructor var mi?
+            for (Constructor<?> c : clazz.getConstructors()) {
+                Class<?>[] params = c.getParameterTypes();
+                plugin.getLogger().info("  Constructor params: " + Arrays.toString(params));
+                
+                if (params.length == 2 && params[0] == String.class && params[1] == String.class) {
+                    Object wrapper = c.newInstance(namespace, name);
+                    plugin.getLogger().info("  2-param wrapper created");
+                    
+                    // getString dene
                     try {
-                        Method m = clazz.getMethod(methodName);
-                        Object charResult = m.invoke(result);
-                        if (charResult != null) {
-                            return charResult.toString();
+                        Method m = clazz.getMethod("getString");
+                        Object result = m.invoke(wrapper);
+                        if (result != null && !result.toString().isEmpty()) {
+                            return result.toString();
                         }
                     } catch (Exception ignored) {}
                 }
             }
         } catch (Exception e) {
-            // Bu yontem calismadi
+            plugin.getLogger().info("  Alt yontem hatasi: " + e.getMessage());
         }
         return null;
     }
 
+    private void loadAllEmojis(ConfigurationSection ranksSection, String namespace) {
+        for (String rankKey : ranksSection.getKeys(false)) {
+            String emoji = ranksSection.getString(rankKey + ".emoji", "");
+            if (emoji.isEmpty() || emojiCache.containsKey(emoji)) continue;
+
+            String cleanName = emoji.replace(":", "");
+            String character = tryFontImageWrapper(namespace + ":" + cleanName, false);
+            
+            if (character == null) {
+                character = tryFontImageWrapper(cleanName, false);
+            }
+
+            if (character != null) {
+                emojiCache.put(emoji, character);
+                plugin.getLogger().info("Emoji yuklendi: " + emoji);
+            }
+        }
+    }
+
     public void openBook(Player player) {
-        // Emoji cache henuz yuklenmediyse tekrar dene
-        if (!cacheLoaded && itemsAdderAvailable) {
+        if (!cacheLoaded) {
             loadEmojiCache();
         }
 
@@ -219,7 +256,6 @@ public class EloTopGUI {
 
             TextComponent.Builder pb = Component.text();
 
-            // ===== BASLIK =====
             pb.append(Component.text("  ✦ ", NamedTextColor.GOLD));
             pb.append(Component.text("Elo Sıralaması", NamedTextColor.BLACK)
                     .decoration(TextDecoration.BOLD, true));
@@ -227,22 +263,18 @@ public class EloTopGUI {
             pb.append(Component.newline());
             pb.append(Component.newline());
 
-            // ===== OYUNCULAR =====
             for (int i = startIndex; i < endIndex; i++) {
                 EloManager.EloEntry entry = leaderboard.get(i);
                 int rank = i + 1;
                 int elo = entry.getElo();
 
-                // Sıra numarası
                 pb.append(Component.text(rank + ": ", NamedTextColor.DARK_GRAY));
 
-                // Rank emojisi
                 String emoji = getEmojiForElo(elo);
                 if (emoji != null && !emoji.isEmpty()) {
                     pb.append(Component.text(emoji + " "));
                 }
 
-                // Hover detay
                 String leagueTag = entry.getLeagueTag();
                 Component hover = Component.text("")
                         .append(Component.text(entry.getPlayerName(), NamedTextColor.WHITE)
@@ -260,14 +292,12 @@ public class EloTopGUI {
                         .append(leagueTag != null && !leagueTag.isEmpty()
                                 ? deserializeHex(leagueTag) : Component.text("?", NamedTextColor.GRAY));
 
-                // Oyuncu ismi
                 pb.append(Component.text(entry.getPlayerName(), NamedTextColor.BLACK)
                         .hoverEvent(HoverEvent.showText(hover)));
 
                 pb.append(Component.newline());
             }
 
-            // ===== SON SAYFADA SEN BILGISI =====
             if (page == totalPages - 1) {
                 pb.append(Component.newline());
                 pb.append(Component.text(" ★ ", NamedTextColor.GOLD));
