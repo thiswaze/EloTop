@@ -66,10 +66,10 @@ public class EloTopGUI {
                 // Sıra numarası
                 pb.append(Component.text(rank + ": ", NamedTextColor.DARK_GRAY));
 
-                // Rank emojisi - PlaceholderAPI ile al
+                // Rank emojisi - PlaceholderAPI ile al (BEYAZ RENK)
                 String emoji = getEmojiForElo(elo, player);
                 if (emoji != null && !emoji.isEmpty()) {
-                    pb.append(Component.text(emoji + " "));
+                    pb.append(Component.text(emoji + " ").color(NamedTextColor.WHITE));
                 }
 
                 // Hover detay
@@ -108,7 +108,7 @@ public class EloTopGUI {
 
                 String yourEmoji = getEmojiForElo(yourElo, player);
                 if (yourEmoji != null && !yourEmoji.isEmpty()) {
-                    pb.append(Component.text(yourEmoji + " "));
+                    pb.append(Component.text(yourEmoji + " ").color(NamedTextColor.WHITE));
                 }
                 pb.append(Component.text(yourElo + " ELO", NamedTextColor.GREEN));
             }
