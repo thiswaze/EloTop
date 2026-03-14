@@ -6,6 +6,7 @@ import com.elotop.listener.GUIClickListener;
 import com.elotop.listener.JoinListener;
 import com.elotop.listener.PaperClickListener;
 import com.elotop.manager.EloManager;
+import com.elotop.manager.GistUploader;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class EloTopPlugin extends JavaPlugin {
@@ -13,6 +14,7 @@ public class EloTopPlugin extends JavaPlugin {
     private static EloTopPlugin instance;
     private EloManager eloManager;
     private EloTopGUI eloTopGUI;
+    private GistUploader gistUploader;
 
     @Override
     public void onEnable() {
@@ -27,6 +29,7 @@ public class EloTopPlugin extends JavaPlugin {
 
         eloManager = new EloManager(this);
         eloTopGUI = new EloTopGUI(this);
+        gistUploader = new GistUploader(this);
 
         getServer().getPluginManager().registerEvents(new JoinListener(this), this);
         getServer().getPluginManager().registerEvents(new PaperClickListener(this), this);
@@ -39,12 +42,14 @@ public class EloTopPlugin extends JavaPlugin {
 
         startCacheTask();
         startAutoSaveTask();
+        startGistTask();
         getLogger().info("EloTop plugin aktif!");
     }
 
     @Override
     public void onDisable() {
         if (eloManager != null) eloManager.shutdown();
+        if (gistUploader != null) gistUploader.uploadLeaderboard();
     }
 
     private void startCacheTask() {
@@ -58,6 +63,13 @@ public class EloTopPlugin extends JavaPlugin {
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             getServer().getScheduler().runTask(this, () -> eloManager.saveData());
         }, 6000L, 6000L);
+    }
+
+    private void startGistTask() {
+        long interval = getConfig().getLong("web.upload-interval", 5) * 60 * 20L;
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            getServer().getScheduler().runTask(this, () -> gistUploader.uploadLeaderboard());
+        }, 600L, interval);
     }
 
     public void reload() {
