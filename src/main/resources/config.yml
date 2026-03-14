@@ -1,7 +1,7 @@
 elo-placeholder: "%alonsoleagues_points%"
 league-placeholder: "%alonsoleagues_league_display%"
 
-auto-give-paper: true
+auto-give-paper: false
 paper-slot: 8
 
 paper:
@@ -25,8 +25,9 @@ messages:
 
 rank-icons:
   enabled: true
+
+  # YONTEM 1: Lig bazli (oncelikli)
   leagues:
-    # Bronz
     BRONZ5:
       placeholder: "%img_rank1%"
     BRONZ4:
@@ -37,7 +38,6 @@ rank-icons:
       placeholder: "%img_rank4%"
     BRONZ1:
       placeholder: "%img_rank5%"
-    # Silver
     GUMUS5:
       placeholder: "%img_rank11%"
     GUMUS4:
@@ -48,14 +48,46 @@ rank-icons:
       placeholder: "%img_rank14%"
     GUMUS1:
       placeholder: "%img_rank15%"
-    # Gold
-    ALTIN5:
-      placeholder: "%img_rank21%"
-    ALTIN4:
-      placeholder: "%img_rank22%"
-    ALTIN3:
-      placeholder: "%img_rank23%"
-    ALTIN2:
-      placeholder: "%img_rank24%"
-    ALTIN1:
-      placeholder: "%img_rank25%"
+
+  # YONTEM 2: Elo bazli (fallback)
+  ranks:
+    rank1:
+      min-elo: 0
+      max-elo: 349
+      placeholder: "%img_rank1%"
+    rank2:
+      min-elo: 350
+      max-elo: 499
+      placeholder: "%img_rank2%"
+    rank3:
+      min-elo: 500
+      max-elo: 749
+      placeholder: "%img_rank3%"
+    rank4:
+      min-elo: 750
+      max-elo: 999
+      placeholder: "%img_rank4%"
+    rank5:
+      min-elo: 1000
+      max-elo: 1000
+      placeholder: "%img_rank5%"
+    rank11:
+      min-elo: 1001
+      max-elo: 1359
+      placeholder: "%img_rank11%"
+    rank12:
+      min-elo: 1360
+      max-elo: 1719
+      placeholder: "%img_rank12%"
+    rank13:
+      min-elo: 1720
+      max-elo: 2079
+      placeholder: "%img_rank13%"
+    rank14:
+      min-elo: 2080
+      max-elo: 2439
+      placeholder: "%img_rank14%"
+    rank15:
+      min-elo: 2440
+      max-elo: 999999
+      placeholder: "%img_rank15%"
