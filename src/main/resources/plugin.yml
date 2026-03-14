@@ -6,9 +6,9 @@ author: EloTop
 description: AlonsoLeagues Elo Top 250 Siralama
 depend:
   - PlaceholderAPI
+  - ItemsAdder
 softdepend:
   - AlonsoLeagues
-  - ItemsAdder
 commands:
   elotop:
     description: Elo siralamasini acar
