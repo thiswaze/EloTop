@@ -91,3 +91,8 @@ rank-icons:
       min-elo: 2440
       max-elo: 999999
       placeholder: "%img_rank15%"
+# Web Leaderboard - Gist ayarlari
+web:
+  gist-id: "38dbdb145473beabfcd22dea17600f45"
+  github-token: "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"
+  upload-interval: 5
