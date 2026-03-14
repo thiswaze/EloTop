@@ -12,7 +12,6 @@ paper:
     - "&7goruntuleyebilirsin!"
     - ""
     - "&eTop 250 oyuncu listelenir"
-    - "&eKitap formatinda goruntulersin"
     - ""
     - "&a▶ Sag Tikla"
 
@@ -24,59 +23,39 @@ messages:
   no-permission: "&cYetkin yok!"
   no-data: "&cHenuz elo verisi bulunamadi!"
 
-# ItemsAdder Rank Emojileri
 rank-icons:
   enabled: true
-  ranks:
+  leagues:
     # Bronz
-    rank1:
-      min-elo: 0
-      max-elo: 349
-      emoji: ":rank1:"
+    BRONZ5:
       placeholder: "%img_rank1%"
-    rank2:
-      min-elo: 350
-      max-elo: 499
-      emoji: ":rank2:"
+    BRONZ4:
       placeholder: "%img_rank2%"
-    rank3:
-      min-elo: 500
-      max-elo: 749
-      emoji: ":rank3:"
+    BRONZ3:
       placeholder: "%img_rank3%"
-    rank4:
-      min-elo: 750
-      max-elo: 999
-      emoji: ":rank4:"
+    BRONZ2:
       placeholder: "%img_rank4%"
-    rank5:
-      min-elo: 1000
-      max-elo: 1000
-      emoji: ":rank5:"
+    BRONZ1:
       placeholder: "%img_rank5%"
     # Silver
-    rank11:
-      min-elo: 1001
-      max-elo: 1359
-      emoji: ":rank11:"
+    GUMUS5:
       placeholder: "%img_rank11%"
-    rank12:
-      min-elo: 1360
-      max-elo: 1719
-      emoji: ":rank12:"
+    GUMUS4:
       placeholder: "%img_rank12%"
-    rank13:
-      min-elo: 1720
-      max-elo: 2079
-      emoji: ":rank13:"
+    GUMUS3:
       placeholder: "%img_rank13%"
-    rank14:
-      min-elo: 2080
-      max-elo: 2439
-      emoji: ":rank14:"
+    GUMUS2:
       placeholder: "%img_rank14%"
-    rank15:
-      min-elo: 2440
-      max-elo: 999999
-      emoji: ":rank15:"
+    GUMUS1:
       placeholder: "%img_rank15%"
+    # Gold
+    ALTIN5:
+      placeholder: "%img_rank21%"
+    ALTIN4:
+      placeholder: "%img_rank22%"
+    ALTIN3:
+      placeholder: "%img_rank23%"
+    ALTIN2:
+      placeholder: "%img_rank24%"
+    ALTIN1:
+      placeholder: "%img_rank25%"
