@@ -153,8 +153,7 @@ public class EloTopGUI {
         ConfigurationSection leaguesSection = plugin.getConfig().getConfigurationSection("rank-icons.leagues");
         if (leaguesSection == null) return null;
 
-        String cleanLeague = stripColors(leagueTag);
-        String normalizedLeague = normalizeLeagueName(cleanLeague);
+        String normalizedLeague = normalizeLeagueName(leagueTag);
 
         for (String leagueKey : leaguesSection.getKeys(false)) {
             String normalizedKey = normalizeLeagueName(leagueKey);
@@ -204,9 +203,10 @@ public class EloTopGUI {
 
     /**
      * Lig ismini normalize et
-     * "#CB7E31&lBRONZ &7&l[&f&lII&7&l]" -> "BRONZ2"
+     * "§x§C§B§7§E§3§1§lBRONZ §7§l[§f§lII§7§l]" -> "BRONZ2"
      * "BRONZ2" -> "BRONZ2"
      * "Bronz II" -> "BRONZ2"
+     * "#CB7E31&lBRONZ &7&l[&f&lII&7&l]" -> "BRONZ2"
      */
     private String normalizeLeagueName(String name) {
         // Renk kodlarini temizle
@@ -227,12 +227,17 @@ public class EloTopGUI {
     }
 
     /**
-     * Renk kodlarini temizle
+     * Renk kodlarini temizle - HEX dahil
      */
     private String stripColors(String text) {
         if (text == null) return "";
-        String stripped = text.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        // §x§C§B§7§E§3§1 hex formatini temizle
+        String stripped = text.replaceAll("§x(§[0-9A-Fa-f]){6}", "");
+        // Normal § kodlarini temizle
+        stripped = stripped.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        // & kodlarini temizle
         stripped = stripped.replaceAll("&[0-9a-fk-orA-FK-OR]", "");
+        // #RRGGBB hex kodlarini temizle
         stripped = stripped.replaceAll("#[0-9A-Fa-f]{6}", "");
         return stripped;
     }
