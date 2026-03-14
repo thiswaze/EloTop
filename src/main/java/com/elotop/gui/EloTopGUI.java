@@ -17,16 +17,17 @@ import java.util.*;
 public class EloTopGUI {
 
     private final EloTopPlugin plugin;
-    // ItemsAdder emoji cache
     private final Map<String, String> emojiCache = new HashMap<>();
+    private boolean cacheLoaded = false;
 
     public EloTopGUI(EloTopPlugin plugin) {
         this.plugin = plugin;
-        loadEmojiCache();
+        // ItemsAdder yuklenene kadar bekle
+        plugin.getServer().getScheduler().runTaskLater(plugin, this::loadEmojiCache, 100L);
     }
 
     /**
-     * ItemsAdder emojilerini onceden yukle
+     * ItemsAdder emojilerini yukle
      */
     private void loadEmojiCache() {
         try {
@@ -44,10 +45,9 @@ public class EloTopGUI {
                             if (exists) {
                                 String character = (String) fontImageClass.getMethod("getString").invoke(fontWrapper);
                                 emojiCache.put(emoji, character);
-                                plugin.getLogger().info("Emoji yuklendi: " + emoji + " -> " + character);
                             }
                         } catch (Exception e) {
-                            plugin.getLogger().warning("Emoji yuklenemedi: " + cleanName);
+                            plugin.getLogger().warning("Emoji yuklenemedi: " + cleanName + " - " + e.getMessage());
                         }
                     }
                 }
@@ -55,15 +55,21 @@ public class EloTopGUI {
             
             if (!emojiCache.isEmpty()) {
                 plugin.getLogger().info(emojiCache.size() + " emoji basariyla yuklendi!");
+                cacheLoaded = true;
             } else {
-                plugin.getLogger().warning("Hicbir emoji yuklenemedi!");
+                plugin.getLogger().warning("Hicbir emoji yuklenemedi! ItemsAdder'da 'rankicons' namespace'i kontrol edin.");
             }
         } catch (ClassNotFoundException e) {
-            plugin.getLogger().severe("ItemsAdder API bulunamadi!");
+            plugin.getLogger().severe("ItemsAdder API bulunamadi! ItemsAdder yuklenmis mi?");
         }
     }
 
     public void openBook(Player player) {
+        // Emoji cache henuz yuklenmediyse tekrar dene
+        if (!cacheLoaded) {
+            loadEmojiCache();
+        }
+
         List<EloManager.EloEntry> leaderboard = plugin.getEloManager().getLeaderboard();
 
         if (leaderboard.isEmpty()) {
@@ -167,9 +173,6 @@ public class EloTopGUI {
         player.openBook(book);
     }
 
-    /**
-     * Elo degerine gore emoji karakterini dondurur
-     */
     private String getEmojiForElo(int elo) {
         if (!plugin.getConfig().getBoolean("rank-icons.enabled", true)) {
             return null;
